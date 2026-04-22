@@ -39,6 +39,7 @@ export default function PatientDetailPage() {
     .toUpperCase();
 
   async function handleExport() {
+    if (!patient) return;
     const blob = await exportPatientData(patient.id);
     const json = JSON.stringify(blob, null, 2);
     const url = URL.createObjectURL(new Blob([json], { type: "application/json" }));
