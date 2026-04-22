@@ -1,0 +1,484 @@
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { getTemplate, listTemplates, type Test } from "@/api/catalog";
+import { createReport, downloadPdf } from "@/api/reports";
+import { Icon } from "@/components/ui/Icon";
+
+type PatientForm = {
+  name: string;
+  sex: "M" | "F" | "O";
+  age: string;
+  phone: string;
+  city: string;
+};
+
+const EMPTY_PATIENT: PatientForm = { name: "", sex: "M", age: "", phone: "", city: "" };
+
+const TEMPLATE_ICON: Record<string, string> = {
+  CBC: "bloodtype",
+  LFT: "science",
+  KFT: "nephrology",
+  TFT: "monitor_heart",
+  URINE: "water_drop",
+  LIPID: "water_drop",
+  WIDAL: "biotech",
+  DENGUE: "coronavirus",
+  MALARIA: "bug_report",
+};
+
+function iconForCode(code: string) {
+  return TEMPLATE_ICON[code.toUpperCase()] ?? "science";
+}
+
+export default function CreateReportPage() {
+  const navigate = useNavigate();
+  const [patient, setPatient] = useState<PatientForm>(EMPTY_PATIENT);
+  const [referredBy, setReferredBy] = useState("Self");
+  const [clinicalHistory, setClinicalHistory] = useState("");
+  const [templateId, setTemplateId] = useState<string>("");
+  const [results, setResults] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const { data: templates } = useQuery({ queryKey: ["templates"], queryFn: listTemplates });
+  const { data: template } = useQuery({
+    queryKey: ["template", templateId],
+    queryFn: () => getTemplate(templateId),
+    enabled: !!templateId,
+  });
+
+  const tests: Test[] = useMemo(
+    () => (template ? template.template_tests.map((tt) => tt.test) : []),
+    [template],
+  );
+
+  useEffect(() => {
+    setResults({});
+  }, [templateId]);
+
+  const stepPatientDone = patient.name.trim().length > 0;
+  const stepTemplateDone = !!templateId;
+  const stepResultsDone = tests.length > 0 && tests.every((t) => (results[t.id] ?? "").trim());
+
+  function pickRange(t: Test): string {
+    const sex = patient.sex;
+    const forSex =
+      t.reference_ranges.find((r) => r.sex === sex) ??
+      t.reference_ranges.find((r) => r.sex === "A");
+    return forSex?.display ?? "";
+  }
+
+  function flagFor(t: Test, value: string): "normal" | "high" | "low" | null {
+    const num = parseFloat(value);
+    if (!Number.isFinite(num)) return null;
+    const range =
+      t.reference_ranges.find((r) => r.sex === patient.sex) ??
+      t.reference_ranges.find((r) => r.sex === "A");
+    if (!range?.display) return null;
+    const match = range.display.match(/(-?\d+\.?\d*)\s*[-–]\s*(-?\d+\.?\d*)/);
+    if (!match) return null;
+    const low = Number(match[1]);
+    const high = Number(match[2]);
+    if (num > high) return "high";
+    if (num < low) return "low";
+    return "normal";
+  }
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!templateId) return setError("Pick a report template.");
+    const missing = tests.filter((t) => !results[t.id]?.trim());
+    if (missing.length > 0)
+      return setError(`Enter a value for: ${missing.map((t) => t.name).join(", ")}`);
+    setSubmitting(true);
+    try {
+      const report = await createReport({
+        patient: {
+          name: patient.name,
+          sex: patient.sex,
+          age: patient.age ? Number(patient.age) : null,
+          age_unit: "years",
+          phone: patient.phone,
+          city: patient.city,
+        },
+        template_id: templateId,
+        results: tests.map((t) => ({ test_id: t.id, value: results[t.id] })),
+        referred_by_text: referredBy,
+        clinical_history: clinicalHistory,
+      });
+      await downloadPdf(report.id, `${report.accession_number}.pdf`);
+      navigate("/reports", { replace: true });
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { detail?: string } } };
+      setError(e.response?.data?.detail ?? "Failed to create report.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="pb-32">
+      <div className="max-w-[1200px] mx-auto flex gap-12 items-start">
+        {/* Side stepper */}
+        <aside className="hidden lg:flex flex-col w-64 sticky top-24 shrink-0 gap-6">
+          <div>
+            <h2 className="text-2xl font-bold text-on-primary-fixed tracking-tight">
+              Report Generator
+            </h2>
+            <p className="text-sm text-on-surface-variant mt-2">
+              Complete all sections to finalize the diagnostic document.
+            </p>
+          </div>
+          <nav className="flex flex-col gap-1 relative">
+            <div className="absolute left-[11px] top-4 bottom-4 w-0.5 bg-surface-container-high -z-10" />
+            <Step n={1} label="Patient Demographics" done={stepPatientDone} />
+            <Step n={2} label="Diagnostic Panel" done={stepTemplateDone} />
+            <Step n={3} label="Clinical Observations" done={stepResultsDone} />
+          </nav>
+        </aside>
+
+        {/* Right content */}
+        <div className="flex-1 bg-surface-container-lowest rounded-xl shadow-dossier ring-1 ring-outline-variant/15 p-8 md:p-10 min-w-0">
+          {/* Step 1 */}
+          <section className="mb-14">
+            <div className="flex justify-between items-end mb-6">
+              <h3 className="text-2xl md:text-3xl font-bold text-on-primary-fixed">
+                Patient Demographics
+              </h3>
+              <div className="bg-surface-container-low p-1 rounded-lg flex gap-1">
+                <button
+                  type="button"
+                  className="bg-surface-container-lowest text-primary-container shadow-sm px-4 py-1.5 rounded-md text-sm font-medium"
+                >
+                  New Patient
+                </button>
+                <button
+                  type="button"
+                  disabled
+                  className="text-on-surface-variant/60 px-4 py-1.5 rounded-md text-sm font-medium cursor-not-allowed"
+                  title="Coming soon"
+                >
+                  Existing
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+              <TextField
+                label="Full Name"
+                required
+                value={patient.name}
+                onChange={(v) => setPatient({ ...patient, name: v })}
+                placeholder="e.g. Name  "
+              />
+              <TextField
+                label="Phone Number"
+                type="tel"
+                value={patient.phone}
+                onChange={(v) => setPatient({ ...patient, phone: v })}
+                placeholder="+91 "
+              />
+              <TextField
+                label="Age (Years)"
+                type="number"
+                value={patient.age}
+                onChange={(v) => setPatient({ ...patient, age: v })}
+                placeholder="45"
+              />
+              <SelectField
+                label="Biological Sex"
+                value={patient.sex}
+                onChange={(v) => setPatient({ ...patient, sex: v as "M" | "F" | "O" })}
+                options={[
+                  { value: "M", label: "Male" },
+                  { value: "F", label: "Female" },
+                  { value: "O", label: "Other" },
+                ]}
+              />
+              <TextField
+                label="City"
+                value={patient.city}
+                onChange={(v) => setPatient({ ...patient, city: v })}
+                placeholder="Ranchi"
+              />
+              <div className="flex flex-col gap-2">
+                <label className="text-xs text-on-surface-variant font-medium uppercase tracking-wider">
+                  Clinical History (optional)
+                </label>
+                <textarea
+                  rows={1}
+                  value={clinicalHistory}
+                  onChange={(e) => setClinicalHistory(e.target.value)}
+                  className="bg-surface-container-highest border border-outline-variant/15 text-on-surface p-3 rounded-md focus:bg-surface-container-lowest focus:border-secondary focus:ring-1 focus:ring-secondary outline-none transition-all text-sm"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Step 2 */}
+          <section className="mb-14">
+            <h3 className="text-2xl font-bold text-on-primary-fixed mb-5">Diagnostic Panel</h3>
+            {!templates ? (
+              <div className="text-on-surface-variant text-sm">Loading templates…</div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+                {templates.map((t) => {
+                  const active = templateId === t.id;
+                  return (
+                    <button
+                      type="button"
+                      key={t.id}
+                      onClick={() => setTemplateId(t.id)}
+                      className={
+                        active
+                          ? "bg-primary-container text-on-primary p-4 rounded-lg text-left shadow-md relative overflow-hidden"
+                          : "bg-surface-container-low text-on-surface hover:bg-surface-container-highest transition-colors p-4 rounded-lg text-left cursor-pointer"
+                      }
+                    >
+                      {active && (
+                        <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-bl-full" />
+                      )}
+                      <div
+                        className={`flex justify-between items-start mb-3 ${
+                          active ? "" : "text-primary-container"
+                        }`}
+                      >
+                        <Icon name={iconForCode(t.code)} size={22} filled={active} />
+                        {active && (
+                          <Icon name="check_circle" size={20} className="text-secondary-fixed" />
+                        )}
+                      </div>
+                      <h4 className="font-bold text-base leading-tight mb-0.5">{t.code}</h4>
+                      <p
+                        className={`text-xs ${
+                          active ? "opacity-80" : "text-on-surface-variant"
+                        } truncate`}
+                      >
+                        {t.name}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          {/* Step 3 */}
+          {tests.length > 0 && (
+            <section>
+              <div className="flex justify-between items-end mb-5">
+                <h3 className="text-2xl font-bold text-on-primary-fixed">Clinical Observations</h3>
+              </div>
+              <div className="w-full overflow-x-auto rounded-lg border border-outline-variant/15">
+                <table className="w-full text-left border-collapse">
+                  <thead className="bg-primary-container text-on-primary text-xs uppercase tracking-wider">
+                    <tr>
+                      <th className="p-3 px-4 font-semibold">Test Parameter</th>
+                      <th className="p-3 px-4 font-semibold w-32">Observed Value</th>
+                      <th className="p-3 px-4 font-semibold w-24">Unit</th>
+                      <th className="p-3 px-4 font-semibold">Biological Ref. Range</th>
+                      <th className="p-3 px-4 font-semibold w-24">Flag</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-sm text-on-surface">
+                    {tests.map((t, i) => {
+                      const val = results[t.id] ?? "";
+                      const flag = flagFor(t, val);
+                      return (
+                        <tr
+                          key={t.id}
+                          className={i % 2 === 0 ? "bg-surface" : "bg-surface-container-low"}
+                        >
+                          <td className="p-3 px-4 font-medium">
+                            {t.name}
+                            {t.method && (
+                              <div className="text-[11px] text-on-surface-variant">{t.method}</div>
+                            )}
+                          </td>
+                          <td className="p-3 px-4">
+                            <input
+                              value={val}
+                              onChange={(e) =>
+                                setResults({ ...results, [t.id]: e.target.value })
+                              }
+                              className={
+                                flag === "high" || flag === "low"
+                                  ? "w-28 bg-error-container/20 border border-error/50 text-error px-2 py-1.5 rounded focus:border-error focus:ring-1 focus:ring-error outline-none font-mono text-right font-bold"
+                                  : "w-28 bg-surface-container-highest border border-outline-variant/15 px-2 py-1.5 rounded focus:bg-surface-container-lowest focus:border-secondary focus:ring-1 focus:ring-secondary outline-none font-mono text-right"
+                              }
+                              placeholder="—"
+                            />
+                          </td>
+                          <td className="p-3 px-4 text-on-surface-variant">{t.unit || "—"}</td>
+                          <td className="p-3 px-4 text-on-surface-variant">{pickRange(t) || "—"}</td>
+                          <td className="p-3 px-4">
+                            {flag === "normal" && (
+                              <span className="inline-flex bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded text-xs border border-on-secondary-container/20">
+                                Normal
+                              </span>
+                            )}
+                            {flag === "high" && (
+                              <span className="inline-flex items-center gap-1 bg-error-container text-on-error-container px-2 py-0.5 rounded text-xs font-bold border border-on-error-container/20">
+                                <Icon name="arrow_upward" size={12} /> High
+                              </span>
+                            )}
+                            {flag === "low" && (
+                              <span className="inline-flex items-center gap-1 bg-tertiary-fixed text-on-tertiary-fixed px-2 py-0.5 rounded text-xs font-bold border border-on-tertiary-fixed/20">
+                                <Icon name="arrow_downward" size={12} /> Low
+                              </span>
+                            )}
+                            {flag == null && <span className="text-on-surface-variant">—</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {error && (
+            <div className="mt-6 rounded-lg bg-error-container text-on-error-container px-4 py-3 text-sm flex items-center gap-2">
+              <Icon name="error" size={16} />
+              {error}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Sticky bottom action bar */}
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[94%] max-w-[820px] bg-surface-container-lowest/90 backdrop-blur-xl p-3 px-5 rounded-xl flex items-center justify-between shadow-[0_8px_32px_rgba(0,22,58,0.12)] z-40 border border-outline-variant/20">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <Icon name="stethoscope" size={20} className="text-primary-container opacity-60" />
+          <div className="flex flex-col w-full max-w-[320px]">
+            <label className="text-[10px] text-on-surface-variant uppercase tracking-wider font-bold">
+              Referred By
+            </label>
+            <input
+              value={referredBy}
+              onChange={(e) => setReferredBy(e.target.value)}
+              className="bg-transparent border-none p-0 text-sm text-on-surface focus:ring-0 placeholder:text-on-surface-variant/50 outline-none"
+              placeholder="Dr. Name (Optional)"
+            />
+          </div>
+        </div>
+        <div className="w-px h-8 bg-outline-variant/30 mx-3" />
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigate("/reports")}
+            className="px-4 py-2.5 text-sm font-medium text-on-surface-variant hover:bg-surface-container-low rounded-lg transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={submitting}
+            className="bg-gradient-to-b from-primary-container to-primary text-on-primary px-5 py-2.5 rounded-lg font-bold text-sm shadow-md hover:opacity-95 transition-opacity flex items-center gap-2 whitespace-nowrap disabled:opacity-60"
+          >
+            {submitting ? "Generating…" : "Finalize & Generate PDF"}
+            {!submitting && <Icon name="picture_as_pdf" size={16} />}
+          </button>
+        </div>
+      </div>
+    </form>
+  );
+}
+
+function Step({ n, label, done }: { n: number; label: string; done: boolean }) {
+  return (
+    <div className="flex items-center gap-4 p-2">
+      <div
+        className={
+          done
+            ? "w-6 h-6 rounded-full bg-secondary text-on-secondary flex items-center justify-center text-xs font-bold shadow-sm"
+            : "w-6 h-6 rounded-full bg-primary-container text-on-primary flex items-center justify-center text-xs font-bold shadow-sm"
+        }
+      >
+        {done ? <Icon name="check" size={14} /> : n}
+      </div>
+      <span
+        className={
+          done
+            ? "text-sm font-semibold text-on-surface"
+            : "text-sm font-semibold text-primary-container"
+        }
+      >
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function TextField({
+  label,
+  required,
+  type = "text",
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  required?: boolean;
+  type?: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="text-xs text-on-surface-variant font-medium uppercase tracking-wider">
+        {label}
+        {required && <span className="text-error"> *</span>}
+      </label>
+      <input
+        type={type}
+        value={value}
+        required={required}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="bg-surface-container-highest border border-outline-variant/15 text-on-surface p-3 rounded-md focus:bg-surface-container-lowest focus:border-secondary focus:ring-1 focus:ring-secondary outline-none transition-all text-sm"
+      />
+    </div>
+  );
+}
+
+function SelectField({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="text-xs text-on-surface-variant font-medium uppercase tracking-wider">
+        {label}
+      </label>
+      <div className="relative">
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full bg-surface-container-highest border border-outline-variant/15 text-on-surface p-3 pr-10 rounded-md focus:bg-surface-container-lowest focus:border-secondary focus:ring-1 focus:ring-secondary outline-none transition-all text-sm appearance-none"
+        >
+          {options.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <Icon
+          name="expand_more"
+          size={18}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none"
+        />
+      </div>
+    </div>
+  );
+}

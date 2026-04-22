@@ -1,0 +1,760 @@
+{% load static %}<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>{{ report.accession_number }} — {{ patient.name }}</title>
+<style>
+  @page {
+    size: A4;
+    margin: 10mm 9mm 44mm 9mm;   /* bottom reserved for running footer */
+    @bottom-center { content: element(page-footer); }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Helvetica", "Arial", sans-serif;
+    font-size: 9pt;
+    color: #1f2937;
+    line-height: 1.4;
+    background: white;
+    position: relative;
+  }
+
+  /* ═══════════════════════════════════════════════
+     WATERMARK (diagonal, behind everything)
+     ═══════════════════════════════════════════════ */
+  .watermark {
+    position: fixed;
+    top: 45%;
+    left: -10%;
+    right: -10%;
+    text-align: center;
+    font-size: 34pt;
+    font-weight: 900;
+    color: rgba(30, 58, 138, 0.06);
+    transform: rotate(-18deg);
+    letter-spacing: 6px;
+    z-index: 0;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  .content { position: relative; z-index: 1; }
+
+  /* ═══════════════════════════════════════════════
+     LETTERHEAD
+     ═══════════════════════════════════════════════ */
+  .letterhead { width: 100%; border-collapse: collapse; }
+  .letterhead td { vertical-align: middle; padding: 0; }
+
+  .lh-logo-cell { width: 56%; }
+  .logo-block { display: table; }
+  .logo-icon {
+    display: table-cell;
+    vertical-align: middle;
+    width: 82px;
+    padding-right: 10px;
+  }
+  .logo-icon img { height: 58px; width: auto; max-width: 82px; display: block; }
+
+  .logo-text { display: table-cell; vertical-align: middle; }
+  .lab-name {
+    font-size: 22pt;
+    font-weight: 900;
+    color: {{ lab.primary_color|default:"#1e3a8a" }};
+    letter-spacing: 0.5px;
+    line-height: 1;
+  }
+  .lab-tagline {
+    font-size: 9pt;
+    color: #1f2937;
+    margin-top: 3px;
+    font-weight: 600;
+  }
+  .lab-tagline .sep { color: #9ca3af; margin: 0 4px; font-weight: normal; }
+
+  .lh-contact-cell {
+    width: 44%;
+    text-align: right;
+    font-size: 9pt;
+    color: #1f2937;
+    vertical-align: middle;
+  }
+  .contact-row { margin-bottom: 3px; font-weight: 600; }
+  .contact-ico {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    background: {{ lab.primary_color|default:"#1e3a8a" }};
+    color: white;
+    text-align: center;
+    border-radius: 50%;
+    font-size: 7.5pt;
+    line-height: 14px;
+    margin-right: 5px;
+    font-weight: bold;
+  }
+
+  .lh-address {
+    font-size: 8.5pt;
+    color: #4b5563;
+    padding: 6px 0 6px 54px;
+    font-weight: 500;
+  }
+
+  .accent-strip {
+    background: {{ lab.primary_color|default:"#1e3a8a" }};
+    color: white;
+    font-size: 8pt;
+    text-align: right;
+    padding: 3px 12px;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+  }
+
+  /* ═══════════════════════════════════════════════
+     PATIENT STRIP (3 columns — white | blue | blue)
+     ═══════════════════════════════════════════════ */
+  .patient-strip {
+    display: table;
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    table-layout: fixed;
+  }
+  .ps-cell {
+    display: table-cell;
+    vertical-align: top;
+    padding: 9px 11px;
+    font-size: 8.5pt;
+  }
+  .ps-left {
+    width: 38%;
+    background: white;
+    border: 1px solid #e5e7eb;
+  }
+  .ps-mid, .ps-right {
+    width: 31%;
+    background: {{ lab.primary_color|default:"#1e3a8a" }};
+    color: white;
+  }
+  .ps-mid { border-right: 1px solid rgba(255,255,255,0.15); }
+
+  .ps-left .pname {
+    font-size: 11pt;
+    font-weight: 800;
+    color: #1f2937;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    line-height: 1.1;
+  }
+  .pleft-grid { display: table; width: 100%; margin-top: 5px; }
+  .pleft-info { display: table-cell; vertical-align: middle; }
+  .pleft-info .prow { margin: 2px 0; font-size: 8.5pt; }
+  .pleft-info .plbl {
+    font-weight: 700;
+    color: #1f2937;
+    display: inline-block;
+    width: 60px;
+  }
+  .pleft-info .pval { color: #374151; }
+
+  .pleft-qr {
+    display: table-cell;
+    vertical-align: middle;
+    text-align: right;
+    width: 68px;
+  }
+  .pleft-qr img { height: 64px; width: 64px; }
+
+  .ps-mid .prow, .ps-right .prow {
+    margin: 3px 0;
+    font-size: 8pt;
+    line-height: 1.4;
+  }
+  .ps-mid .plbl, .ps-right .plbl {
+    font-weight: 700;
+    color: #ffffff;
+    display: block;
+    font-size: 7.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.85;
+  }
+  .ps-mid .pval, .ps-right .pval {
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 9pt;
+  }
+  .ps-right-barcode {
+    background: #ffffff;
+    padding: 4px 6px;
+    text-align: center;
+    margin-bottom: 6px;
+    border-radius: 2px;
+  }
+  .ps-right-barcode img { height: 22px; width: 100%; object-fit: contain; display: block; }
+
+  /* ═══════════════════════════════════════════════
+     TEST TITLE (centered with side rules)
+     ═══════════════════════════════════════════════ */
+  .test-title-wrap {
+    margin: 18px 0 8px 0;
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+  }
+  .ttw-side {
+    display: table-cell;
+    vertical-align: middle;
+    width: 30%;
+  }
+  .ttw-side hr {
+    border: none;
+    border-top: 1px solid #d1d5db;
+  }
+  .ttw-title {
+    display: table-cell;
+    text-align: center;
+    vertical-align: middle;
+    font-size: 14pt;
+    font-weight: 800;
+    color: #1f2937;
+    letter-spacing: 0.3px;
+    padding: 0 14px;
+    white-space: nowrap;
+  }
+
+  /* ═══════════════════════════════════════════════
+     RESULTS TABLE
+     ═══════════════════════════════════════════════ */
+  table.results {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  table.results thead th {
+    background: white;
+    border-top: 1.5px solid #9ca3af;
+    border-bottom: 1.5px solid #9ca3af;
+    padding: 7px 8px;
+    font-size: 9pt;
+    text-align: left;
+    color: #1f2937;
+    font-weight: 700;
+  }
+  table.results tbody td {
+    padding: 7px 8px;
+    font-size: 9pt;
+    vertical-align: top;
+    border-bottom: 1px solid #f3f4f6;
+  }
+  table.results td.col-test { width: 32%; }
+  table.results td.col-result { width: 14%; font-weight: 700; color: #1f2937; }
+  table.results td.col-status { width: 19%; }
+  table.results td.col-range { width: 22%; color: #4b5563; }
+  table.results td.col-unit { width: 13%; color: #4b5563; }
+
+  .test-name { font-weight: 700; color: #1f2937; }
+  .test-sub {
+    display: block;
+    font-size: 7.5pt;
+    color: #9ca3af;
+    font-weight: normal;
+    font-style: italic;
+    margin-top: 1px;
+  }
+
+  /* Subsection rows inside the table (e.g. BLOOD INDICES) */
+  .subsection-row td {
+    background: #f3f4f6 !important;
+    font-weight: 700;
+    color: #1f2937;
+    font-size: 8.5pt;
+    padding: 5px 8px !important;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    border-top: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  /* "Sample Type" / TAT informational row (first row in each table) */
+  .info-row td {
+    background: #fafafa;
+    font-size: 8.5pt;
+    color: #4b5563;
+    padding: 5px 8px !important;
+  }
+  .info-row .info-label { font-weight: 700; color: #1f2937; }
+
+  /* ═══════════════════════════════════════════════
+     STATUS BADGES  (green / red pills)
+     ═══════════════════════════════════════════════ */
+  .badge {
+    display: inline-block;
+    padding: 2px 10px 2px 8px;
+    border-radius: 3px;
+    font-size: 8.5pt;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    line-height: 1.3;
+  }
+  .badge-normal {
+    background: #d1fae5;
+    color: #047857;
+  }
+  .badge-normal::before {
+    content: "✓  ";
+    font-weight: 900;
+  }
+  .badge-high, .badge-critical_high {
+    background: #fee2e2;
+    color: #b91c1c;
+  }
+  .badge-high::before, .badge-critical_high::before {
+    content: "▲  ";
+  }
+  .badge-low, .badge-critical_low {
+    background: #fee2e2;
+    color: #b91c1c;
+  }
+  .badge-low::before, .badge-critical_low::before {
+    content: "⚠  ";
+  }
+
+  /* ═══════════════════════════════════════════════
+     INTERPRETATION
+     ═══════════════════════════════════════════════ */
+  .interpretation {
+    margin-top: 16px;
+    padding: 0;
+    display: table;
+    width: 100%;
+    border-top: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .interp-label {
+    display: table-cell;
+    background: {{ lab.primary_color|default:"#1e3a8a" }};
+    color: white;
+    padding: 10px 14px;
+    font-weight: 700;
+    font-size: 10pt;
+    width: 120px;
+    vertical-align: middle;
+    letter-spacing: 0.3px;
+  }
+  .interp-body {
+    display: table-cell;
+    padding: 10px 14px;
+    vertical-align: middle;
+    font-size: 9.5pt;
+    color: #374151;
+  }
+
+  .clinical-block {
+    margin-top: 12px;
+    page-break-inside: avoid;
+  }
+  .clinical-block h3 {
+    font-size: 9.5pt;
+    margin: 4px 0 3px 0;
+    color: {{ lab.primary_color|default:"#1e3a8a" }};
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .clinical-block p { margin: 3px 0; font-size: 9pt; text-align: justify; color: #374151; }
+
+  /* ═══════════════════════════════════════════════
+     END MARKER + SIGNATURES
+     ═══════════════════════════════════════════════ */
+  .end-marker {
+    text-align: center;
+    margin: 16px 0 10px 0;
+    font-weight: 700;
+    color: #6b7280;
+    font-size: 9pt;
+    letter-spacing: 0.5px;
+  }
+
+  .signatures {
+    display: table;
+    width: 100%;
+    margin-top: 8px;
+    padding-top: 10px;
+    border-top: 1px solid #e5e7eb;
+    table-layout: fixed;
+  }
+  .sig-cell {
+    display: table-cell;
+    width: 33.33%;
+    text-align: center;
+    vertical-align: bottom;
+    padding: 0 10px;
+  }
+  .sig-thanks {
+    font-size: 8pt;
+    color: #6b7280;
+    margin-bottom: 3px;
+    font-style: italic;
+  }
+  .sig-img { height: 36px; margin-bottom: 2px; }
+  .sig-stamp-wrap {
+    display: inline-block;
+    vertical-align: middle;
+  }
+  .sig-stamp {
+    display: inline-block;
+    width: 36px;
+    height: 36px;
+    border: 1.5px solid {{ lab.primary_color|default:"#1e3a8a" }};
+    border-radius: 50%;
+    vertical-align: middle;
+    margin-left: 4px;
+    position: relative;
+  }
+  .sig-stamp::before {
+    content: "✓";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+    color: {{ lab.primary_color|default:"#1e3a8a" }};
+    font-size: 14pt;
+    font-weight: bold;
+  }
+  .sig-name {
+    font-weight: 700;
+    font-size: 9.5pt;
+    color: #1f2937;
+    margin-top: 3px;
+  }
+  .sig-sub {
+    font-size: 8pt;
+    color: #6b7280;
+  }
+
+  /* ═══════════════════════════════════════════════
+     PAGE FOOTER (runs at bottom of every page)
+     ═══════════════════════════════════════════════ */
+  .page-footer {
+    position: running(page-footer);
+    width: 100%;
+    font-size: 7.5pt;
+    color: #6b7280;
+  }
+  .footer-info {
+    display: table;
+    width: 100%;
+    padding: 6px 2px;
+    border-top: 1px solid #e5e7eb;
+  }
+  .footer-info > div { display: table-cell; vertical-align: middle; }
+  .fi-left { width: 55%; font-size: 7.5pt; color: #6b7280; line-height: 1.3; }
+  .fi-mid { width: 25%; text-align: center; font-size: 7pt; color: #6b7280; }
+  .fi-right { width: 20%; text-align: right; }
+  .fi-right img { height: 38px; }
+  .fi-barcode { margin-top: 2px; }
+  .fi-barcode img { height: 18px; }
+
+  .accreditation {
+    display: inline-block;
+    font-weight: 700;
+    color: #374151;
+    border: 1px solid #9ca3af;
+    padding: 2px 6px;
+    font-size: 7pt;
+    letter-spacing: 0.3px;
+  }
+
+  .bottom-bar {
+    background: {{ lab.primary_color|default:"#1e3a8a" }};
+    color: white;
+    padding: 5px 10px;
+    display: table;
+    width: 100%;
+    font-size: 8pt;
+    margin-top: 3px;
+  }
+  .bb-left, .bb-right {
+    display: table-cell;
+    vertical-align: middle;
+    font-weight: 600;
+  }
+  .bb-right { text-align: right; }
+  .bb-page {
+    font-size: 7.5pt;
+    opacity: 0.9;
+  }
+  .bb-page::after {
+    content: " Page " counter(page) " of " counter(pages);
+  }
+
+  .disclaimer {
+    font-size: 6.8pt;
+    color: #9ca3af;
+    line-height: 1.4;
+    text-align: center;
+    padding: 3px 6px 0 6px;
+  }
+</style>
+</head>
+<body>
+
+{# Running footer MUST be declared before content so WeasyPrint activates it on page 1 #}
+<div class="page-footer">
+  <div class="footer-info">
+    <div class="fi-left">
+      To Check Report Authenticity by Scanning QR Code on Top<br>
+      <span class="disclaimer">
+        This is a computer-generated report. Results relate only to the sample tested and should be correlated clinically.
+      </span>
+    </div>
+    <div class="fi-mid">
+      <span class="accreditation">ISO 9001:2015</span><br>
+      <span style="font-size:7pt;color:#6b7280;margin-top:3px;display:inline-block;">
+        Generated on: {% now "d M, Y h:i A" %}
+      </span>
+    </div>
+    <div class="fi-right">
+      {% if qr_img %}<img src="{{ qr_img }}" alt="verify">{% endif %}
+      {% if barcode_img %}<div class="fi-barcode"><img src="{{ barcode_img }}" alt="{{ report.accession_number }}"></div>{% endif %}
+    </div>
+  </div>
+
+  <div class="bottom-bar">
+    <div class="bb-left">{% if lab.website %}{{ lab.website }}{% else %}www.{{ lab.name|slugify }}.com{% endif %}</div>
+    <div class="bb-right">
+      {% if lab.phone %}<span>{{ lab.phone }}</span>&nbsp;&nbsp;&nbsp;{% endif %}
+      <span class="bb-page"></span>
+    </div>
+  </div>
+</div>
+
+<div class="watermark">{{ lab.name|upper }}</div>
+
+<div class="content">
+
+{# ═══════════════════ LETTERHEAD ═══════════════════ #}
+<table class="letterhead" cellspacing="0" cellpadding="0">
+  <tr>
+    <td class="lh-logo-cell">
+      <div class="logo-block">
+        <div class="logo-icon">
+          <img src="{{ lab.settings.brand_logo_path|default:'static/branding/patholab.png' }}" alt="{{ lab.name }}">
+        </div>
+        <div class="logo-text">
+          <div class="lab-name">{{ lab.name|upper }}</div>
+          <div class="lab-tagline">
+            {% if lab.settings.tagline %}{{ lab.settings.tagline }}{% else %}Accurate <span class="sep">|</span> Caring <span class="sep">|</span> Instant{% endif %}
+          </div>
+        </div>
+      </div>
+    </td>
+    <td class="lh-contact-cell">
+      {% if lab.phone %}<div class="contact-row"><span class="contact-ico">✆</span>{{ lab.phone }}</div>{% endif %}
+      {% if lab.email %}<div class="contact-row"><span class="contact-ico">✉</span>{{ lab.email }}</div>{% endif %}
+    </td>
+  </tr>
+</table>
+
+<div class="lh-address">
+  {% if lab.address %}{{ lab.address }}{% endif %}{% if lab.city %}, {{ lab.city }}{% endif %}{% if lab.state %}, {{ lab.state }}{% endif %}{% if lab.pincode %} - {{ lab.pincode }}{% endif %}
+</div>
+
+<div class="accent-strip">
+  {% if lab.website %}{{ lab.website }}{% else %}www.{{ lab.name|slugify }}.com{% endif %}
+</div>
+
+{# ═══════════════════ PATIENT STRIP ═══════════════════ #}
+<div class="patient-strip">
+  <div class="ps-cell ps-left">
+    <div class="pname">{{ patient.name }}</div>
+    <div class="pleft-grid">
+      <div class="pleft-info">
+        {% if patient.age %}
+        <div class="prow"><span class="plbl">Age:</span> <span class="pval">{{ patient.age }} {{ patient.age_unit|default:"Years" }}</span></div>
+        {% endif %}
+        {% if patient.sex %}
+        <div class="prow"><span class="plbl">Sex:</span> <span class="pval">{{ patient.get_sex_display }}</span></div>
+        {% endif %}
+        <div class="prow"><span class="plbl">UHID:</span> <span class="pval">{{ patient.patient_code }}</span></div>
+        {% if patient.phone %}
+        <div class="prow"><span class="plbl">Phone:</span> <span class="pval">{{ patient.phone }}</span></div>
+        {% endif %}
+      </div>
+      <div class="pleft-qr">
+        {% if qr_img %}<img src="{{ qr_img }}" alt="verify">{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="ps-cell ps-mid">
+    <div class="prow">
+      <span class="plbl">Sample Collected At:</span>
+      <span class="pval">{% if report.collection_address %}{{ report.collection_address }}{% elif lab.address %}{{ lab.address }}{% if lab.city %}, {{ lab.city }}{% endif %}{% endif %}</span>
+    </div>
+    <div class="prow">
+      <span class="plbl">Sample Collected By:</span>
+      <span class="pval">{{ report.collected_by|default:"—" }}</span>
+    </div>
+    <div class="prow">
+      <span class="plbl">Ref. By:</span>
+      <span class="pval">{% if report.referring_doctor %}Dr. {{ report.referring_doctor.name }}{% else %}{{ report.referred_by_text|default:"Self" }}{% endif %}</span>
+    </div>
+  </div>
+
+  <div class="ps-cell ps-right">
+    {% if barcode_img %}<div class="ps-right-barcode"><img src="{{ barcode_img }}" alt="{{ report.accession_number }}"></div>{% endif %}
+    <div class="prow">
+      <span class="plbl">Registered on:</span>
+      <span class="pval">{{ report.billing_date|date:"h:i A d M Y" }}</span>
+    </div>
+    <div class="prow">
+      <span class="plbl">Collected on:</span>
+      <span class="pval">{{ report.sample_collected_at|date:"h:i A d M Y" }}</span>
+    </div>
+    <div class="prow">
+      <span class="plbl">Reported on:</span>
+      <span class="pval">{{ report.signed_at|date:"h:i A d M Y" }}</span>
+    </div>
+  </div>
+</div>
+
+{# ═══════════════════ RESULTS ═══════════════════ #}
+{% for category in categories %}
+
+<div class="test-title-wrap">
+  <div class="ttw-side"><hr></div>
+  <div class="ttw-title">{{ category.name }}</div>
+  <div class="ttw-side"><hr></div>
+</div>
+
+<table class="results">
+  <thead>
+    <tr>
+      <th class="col-test">Investigation</th>
+      <th class="col-result">Result</th>
+      <th class="col-status">Status</th>
+      <th class="col-range">Reference Value</th>
+      <th class="col-unit">Unit</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% if category.sample_type or category.tat %}
+    <tr class="info-row">
+      <td colspan="5">
+        {% if category.sample_type %}<span class="info-label">Sample Type:</span> {{ category.sample_type }}{% endif %}
+        {% if category.sample_type and category.tat %} &nbsp;&nbsp;&nbsp; {% endif %}
+        {% if category.tat %}<span class="info-label">TAT:</span> {{ category.tat }}{% endif %}
+      </td>
+    </tr>
+    {% endif %}
+
+    {% regroup category.results by subsection as subsection_groups %}
+    {% for group in subsection_groups %}
+      {% if group.grouper %}
+      <tr class="subsection-row"><td colspan="5">{{ group.grouper }}</td></tr>
+      {% endif %}
+      {% for r in group.list %}
+      <tr>
+        <td class="col-test">
+          <span class="test-name">{{ r.test.name }}</span>
+          {% if r.method_used or r.test.sample_type %}
+            <span class="test-sub">
+              {% if r.method_used %}{{ r.method_used }}{% endif %}
+              {% if r.method_used and r.test.sample_type %}, {% endif %}
+              {% if r.test.sample_type %}{{ r.test.sample_type }}{% endif %}
+            </span>
+          {% endif %}
+        </td>
+        <td class="col-result">{{ r.result_value }}</td>
+        <td class="col-status">
+          {% if r.flag == "normal" or not r.is_abnormal %}
+            <span class="badge badge-normal">Normal</span>
+          {% elif r.flag == "high" %}
+            <span class="badge badge-high">High</span>
+          {% elif r.flag == "critical_high" %}
+            <span class="badge badge-critical_high">Critical High</span>
+          {% elif r.flag == "low" %}
+            <span class="badge badge-low">Low</span>
+          {% elif r.flag == "critical_low" %}
+            <span class="badge badge-critical_low">Critical Low</span>
+          {% else %}
+            <span class="badge badge-normal">Normal</span>
+          {% endif %}
+        </td>
+        <td class="col-range">{{ r.reference_range_used }}</td>
+        <td class="col-unit">{{ r.unit_used }}</td>
+      </tr>
+      {% endfor %}
+    {% endfor %}
+  </tbody>
+</table>
+{% endfor %}
+
+{# ═══════════════════ INTERPRETATION ═══════════════════ #}
+{% if report.interpretation %}
+<div class="interpretation">
+  <div class="interp-label">Interpretation</div>
+  <div class="interp-body">{{ report.interpretation }}</div>
+</div>
+{% endif %}
+
+{% with clinical_tests=report.results.all %}
+  {% for r in clinical_tests %}
+    {% if r.test.clinical_significance and forloop.first %}<div class="clinical-block"><h3>Clinical Significance</h3>{% endif %}
+    {% if r.test.clinical_significance %}<p><b>{{ r.test.name }}:</b> {{ r.test.clinical_significance }}</p>{% endif %}
+    {% if r.test.clinical_significance and forloop.last %}</div>{% endif %}
+  {% endfor %}
+{% endwith %}
+
+<div class="end-marker">**** End of Report ****</div>
+
+{# ═══════════════════ SIGNATURES ═══════════════════ #}
+<div class="signatures">
+  {% if report.technician %}
+  <div class="sig-cell">
+    <div class="sig-thanks">Thanks for Reference</div>
+    {% if report.technician.signature_image %}
+      <img src="{{ report.technician.signature_image.path }}" class="sig-img" alt="signature">
+    {% endif %}
+    <div class="sig-stamp-wrap"><span class="sig-stamp"></span></div>
+    <div class="sig-name">{{ report.technician.full_name|default:"Medical Lab Technician" }}</div>
+    <div class="sig-sub">{{ report.technician.qualification|default:"DMLT, BMLT" }}</div>
+  </div>
+  {% else %}
+  <div class="sig-cell">
+    <div class="sig-thanks">Thanks for Reference</div>
+    <div class="sig-stamp-wrap"><span class="sig-stamp"></span></div>
+    <div class="sig-name">Medical Lab Technician</div>
+    <div class="sig-sub">DMLT, BMLT</div>
+  </div>
+  {% endif %}
+
+  {% if report.verified_by %}
+  <div class="sig-cell">
+    {% if report.verified_by.signature_image %}
+      <img src="{{ report.verified_by.signature_image.path }}" class="sig-img" alt="signature">
+    {% endif %}
+    <div class="sig-stamp-wrap"><span class="sig-stamp"></span></div>
+    <div class="sig-name">Dr. {{ report.verified_by.full_name|default:report.verified_by.email }}</div>
+    <div class="sig-sub">{{ report.verified_by.qualification|default:"MD, Pathologist" }}</div>
+  </div>
+  {% endif %}
+
+  <div class="sig-cell">
+    {% if signed_by and signed_by.signature_image %}
+      <img src="{{ signed_by.signature_image.path }}" class="sig-img" alt="signature">
+    {% endif %}
+    <div class="sig-stamp-wrap"><span class="sig-stamp"></span></div>
+    <div class="sig-name">Dr. {{ signed_by.full_name|default:signed_by.email|default:"Consultant Pathologist" }}</div>
+    <div class="sig-sub">{{ signed_by.qualification|default:"MD, Pathologist" }}</div>
+  </div>
+</div>
+
+</div>{# /.content #}
+
+</body>
+</html>
