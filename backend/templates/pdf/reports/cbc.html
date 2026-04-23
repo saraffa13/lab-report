@@ -1,0 +1,45 @@
+{% extends "pdf/reports/generic.html" %}
+
+{% block extra_style %}
+  /* ── CBC-only compact layout: fit ~20 rows on one A4 page ── */
+
+  @page {
+    size: A4;
+    margin: 7mm 9mm 38mm 9mm;
+    @bottom-center { content: element(page-footer); }
+  }
+
+  /* Tighter patient strip + letterhead spacing */
+  .patient-strip { margin-top: 6px; }
+  .ps-cell { padding: 6px 10px; }
+  .lh-address { padding: 3px 0 3px 54px; }
+
+  /* Smaller section title with less vertical margin */
+  .test-title-wrap { margin: 8px 0 4px 0; }
+  .ttw-title { font-size: 11pt; }
+
+  /* Compact results table */
+  table.results thead th { padding: 4px 8px; font-size: 8.5pt; }
+  table.results tbody td {
+    padding: 2.5px 8px;
+    font-size: 8.5pt;
+    vertical-align: middle;
+    line-height: 1.25;
+  }
+
+  /* Italic gray sub-text (method / sample) — smaller for CBC */
+  .test-sub {
+    font-size: 6.5pt;
+    margin-top: 0;
+  }
+
+  .subsection-row td { font-size: 8pt; padding: 3px 8px !important; }
+  .info-row td { font-size: 8pt; padding: 3px 8px !important; }
+
+  /* Tighter footer blocks */
+  .end-marker { margin: 6px 0 4px 0; font-size: 8.5pt; }
+  .signatures { margin-top: 4px; padding-top: 6px; }
+  .sig-img { height: 28px; }
+  .sig-stamp { width: 28px; height: 28px; }
+  .sig-stamp::before { font-size: 11pt; }
+{% endblock %}
