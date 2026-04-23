@@ -3,13 +3,18 @@ import { Navigate, Outlet, Link, useLocation, NavLink } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Icon } from "@/components/ui/Icon";
 
-const NAV = [
+const STAFF_NAV = [
   { to: "/dashboard", label: "Dashboard" },
   { to: "/reports", label: "Reports" },
   { to: "/patients", label: "Patients" },
   { to: "/catalog", label: "Catalog" },
   { to: "/users", label: "Users" },
   { to: "/settings", label: "Settings" },
+];
+
+const PATIENT_NAV = [
+  { to: "/my-reports", label: "My Reports" },
+  { to: "/my-profile", label: "My Profile" },
 ];
 
 export default function AppLayout() {
@@ -21,13 +26,17 @@ export default function AppLayout() {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
+  const isPatient = user?.role_code === "patient";
+  const NAV = isPatient ? PATIENT_NAV : STAFF_NAV;
+  const homeLink = isPatient ? "/my-reports" : "/dashboard";
+
   return (
     <div className="min-h-screen bg-surface text-on-surface flex flex-col">
       <header className="bg-surface sticky top-0 z-50 shadow-nav">
         <div className="flex justify-between items-center w-full px-6 lg:px-8 h-16 max-w-[1920px] mx-auto">
           <div className="flex items-center gap-8">
             <Link
-              to="/dashboard"
+              to={homeLink}
               className="text-[15px] font-black tracking-tighter text-primary-container uppercase leading-none"
             >
               K S Ganga Medical Clinic
@@ -50,19 +59,23 @@ export default function AppLayout() {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="hidden lg:flex items-center bg-surface-container-lowest ring-1 ring-outline-variant/20 rounded-full px-4 py-1.5 focus-within:ring-secondary transition-all">
-              <Icon name="search" size={16} className="text-on-surface-variant mr-2" />
-              <input
-                className="bg-transparent border-none focus:ring-0 text-sm outline-none w-48 text-on-surface placeholder-on-surface-variant/50"
-                placeholder="Search accession, patient..."
-              />
-            </div>
-            <button className="hidden md:inline-flex text-primary-container hover:bg-surface-container-low p-2 rounded-full transition-all">
-              <Icon name="notifications" size={20} />
-            </button>
-            <button className="hidden md:inline-flex text-primary-container hover:bg-surface-container-low p-2 rounded-full transition-all">
-              <Icon name="help_outline" size={20} />
-            </button>
+            {!isPatient && (
+              <>
+                <div className="hidden lg:flex items-center bg-surface-container-lowest ring-1 ring-outline-variant/20 rounded-full px-4 py-1.5 focus-within:ring-secondary transition-all">
+                  <Icon name="search" size={16} className="text-on-surface-variant mr-2" />
+                  <input
+                    className="bg-transparent border-none focus:ring-0 text-sm outline-none w-48 text-on-surface placeholder-on-surface-variant/50"
+                    placeholder="Search accession, patient..."
+                  />
+                </div>
+                <button className="hidden md:inline-flex text-primary-container hover:bg-surface-container-low p-2 rounded-full transition-all">
+                  <Icon name="notifications" size={20} />
+                </button>
+                <button className="hidden md:inline-flex text-primary-container hover:bg-surface-container-low p-2 rounded-full transition-all">
+                  <Icon name="help_outline" size={20} />
+                </button>
+              </>
+            )}
 
             <div className="relative">
               <button

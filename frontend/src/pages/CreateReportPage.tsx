@@ -1,8 +1,15 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getTemplate, listTemplates, type Test } from "@/api/catalog";
-import { createReport, downloadPdf } from "@/api/reports";
+import { listPatients, type Patient } from "@/api/patients";
+import {
+  createReferringDoctor,
+  createReport,
+  downloadPdf,
+  listReferringDoctors,
+  type ReferringDoctor,
+} from "@/api/reports";
 import { Icon } from "@/components/ui/Icon";
 
 type PatientForm = {
@@ -11,9 +18,24 @@ type PatientForm = {
   age: string;
   phone: string;
   city: string;
+  blood_group: string;
 };
 
-const EMPTY_PATIENT: PatientForm = { name: "", sex: "M", age: "", phone: "", city: "" };
+const EMPTY_PATIENT: PatientForm = {
+  name: "", sex: "M", age: "", phone: "", city: "", blood_group: "",
+};
+
+const BLOOD_GROUP_OPTIONS = [
+  { value: "", label: "Unknown" },
+  { value: "A+", label: "A+" },
+  { value: "A-", label: "A-" },
+  { value: "B+", label: "B+" },
+  { value: "B-", label: "B-" },
+  { value: "O+", label: "O+" },
+  { value: "O-", label: "O-" },
+  { value: "AB+", label: "AB+" },
+  { value: "AB-", label: "AB-" },
+];
 
 const TEMPLATE_ICON: Record<string, string> = {
   CBC: "bloodtype",
@@ -40,8 +62,13 @@ export default function CreateReportPage() {
   const [results, setResults] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [patientMode, setPatientMode] = useState<"new" | "existing">("new");
 
   const { data: templates } = useQuery({ queryKey: ["templates"], queryFn: listTemplates });
+  const { data: doctors } = useQuery({
+    queryKey: ["referring-doctors"],
+    queryFn: () => listReferringDoctors(),
+  });
   const { data: template } = useQuery({
     queryKey: ["template", templateId],
     queryFn: () => getTemplate(templateId),
@@ -102,12 +129,21 @@ export default function CreateReportPage() {
           age_unit: "years",
           phone: patient.phone,
           city: patient.city,
+          blood_group: patient.blood_group,
         },
         template_id: templateId,
         results: tests.map((t) => ({ test_id: t.id, value: results[t.id] })),
         referred_by_text: referredBy,
         clinical_history: clinicalHistory,
       });
+      const typed = referredBy.trim();
+      if (
+        typed &&
+        typed.toLowerCase() !== "self" &&
+        !(doctors ?? []).some((d) => d.name.toLowerCase() === typed.toLowerCase())
+      ) {
+        try { await createReferringDoctor(typed); } catch { /* non-fatal */ }
+      }
       await downloadPdf(report.id, `${report.accession_number}.pdf`);
       navigate("/reports", { replace: true });
     } catch (err: unknown) {
@@ -150,20 +186,44 @@ export default function CreateReportPage() {
               <div className="bg-surface-container-low p-1 rounded-lg flex gap-1">
                 <button
                   type="button"
-                  className="bg-surface-container-lowest text-primary-container shadow-sm px-4 py-1.5 rounded-md text-sm font-medium"
+                  onClick={() => setPatientMode("new")}
+                  className={
+                    patientMode === "new"
+                      ? "bg-surface-container-lowest text-primary-container shadow-sm px-4 py-1.5 rounded-md text-sm font-medium"
+                      : "text-on-surface-variant px-4 py-1.5 rounded-md text-sm font-medium"
+                  }
                 >
                   New Patient
                 </button>
                 <button
                   type="button"
-                  disabled
-                  className="text-on-surface-variant/60 px-4 py-1.5 rounded-md text-sm font-medium cursor-not-allowed"
-                  title="Coming soon"
+                  onClick={() => setPatientMode("existing")}
+                  className={
+                    patientMode === "existing"
+                      ? "bg-surface-container-lowest text-primary-container shadow-sm px-4 py-1.5 rounded-md text-sm font-medium"
+                      : "text-on-surface-variant px-4 py-1.5 rounded-md text-sm font-medium"
+                  }
                 >
                   Existing
                 </button>
               </div>
             </div>
+            {patientMode === "existing" && (
+              <div className="mb-5">
+                <PatientSearch
+                  onPick={(p) =>
+                    setPatient({
+                      name: p.name,
+                      sex: (p.sex as "M" | "F" | "O") || "M",
+                      age: p.age != null ? String(p.age) : "",
+                      phone: p.phone || "",
+                      city: p.city || "",
+                      blood_group: p.blood_group || "",
+                    })
+                  }
+                />
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
               <TextField
                 label="Full Name"
@@ -201,6 +261,12 @@ export default function CreateReportPage() {
                 value={patient.city}
                 onChange={(v) => setPatient({ ...patient, city: v })}
                 placeholder="Ranchi"
+              />
+              <SelectField
+                label="Blood Group"
+                value={patient.blood_group}
+                onChange={(v) => setPatient({ ...patient, blood_group: v })}
+                options={BLOOD_GROUP_OPTIONS}
               />
               <div className="flex flex-col gap-2">
                 <label className="text-xs text-on-surface-variant font-medium uppercase tracking-wider">
@@ -352,15 +418,14 @@ export default function CreateReportPage() {
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[94%] max-w-[820px] bg-surface-container-lowest/90 backdrop-blur-xl p-3 px-5 rounded-xl flex items-center justify-between shadow-[0_8px_32px_rgba(0,22,58,0.12)] z-40 border border-outline-variant/20">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <Icon name="stethoscope" size={20} className="text-primary-container opacity-60" />
-          <div className="flex flex-col w-full max-w-[320px]">
-            <label className="text-[10px] text-on-surface-variant uppercase tracking-wider font-bold">
+          <div className="w-full max-w-[320px]">
+            <label className="text-[10px] text-on-surface-variant uppercase tracking-wider font-bold block mb-1">
               Referred By
             </label>
-            <input
+            <DoctorAutocomplete
               value={referredBy}
-              onChange={(e) => setReferredBy(e.target.value)}
-              className="bg-transparent border-none p-0 text-sm text-on-surface focus:ring-0 placeholder:text-on-surface-variant/50 outline-none"
-              placeholder="Dr. Name (Optional)"
+              onChange={setReferredBy}
+              doctors={doctors ?? []}
             />
           </div>
         </div>
@@ -441,6 +506,194 @@ function TextField({
         placeholder={placeholder}
         className="bg-surface-container-highest border border-outline-variant/15 text-on-surface p-3 rounded-md focus:bg-surface-container-lowest focus:border-secondary focus:ring-1 focus:ring-secondary outline-none transition-all text-sm"
       />
+    </div>
+  );
+}
+
+function PatientSearch({ onPick }: { onPick: (p: Patient) => void }) {
+  const [q, setQ] = useState("");
+  const [debounced, setDebounced] = useState("");
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(q.trim()), 250);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  const { data: patients, isFetching } = useQuery({
+    queryKey: ["patients-search", debounced],
+    queryFn: () => listPatients(debounced),
+    enabled: open,
+  });
+
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (!wrapRef.current) return;
+      if (!wrapRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
+
+  const results = (patients ?? []).slice(0, 8);
+
+  return (
+    <div className="relative" ref={wrapRef}>
+      <label className="text-xs text-on-surface-variant font-medium uppercase tracking-wider block mb-2">
+        Search Existing Patient
+      </label>
+      <div className="relative">
+        <Icon
+          name="search"
+          size={18}
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none"
+        />
+        <input
+          value={q}
+          onChange={(e) => {
+            setQ(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          placeholder="Search by name or phone…"
+          className="w-full bg-surface-container-highest border border-outline-variant/15 text-on-surface p-3 pl-10 rounded-md focus:bg-surface-container-lowest focus:border-secondary focus:ring-1 focus:ring-secondary outline-none transition-all text-sm"
+          autoComplete="off"
+        />
+      </div>
+      {open && (
+        <ul className="absolute top-full left-0 right-0 mt-1 z-40 bg-surface-container-lowest border border-outline-variant/30 rounded-md shadow-lg max-h-72 overflow-auto py-1 text-sm">
+          {isFetching && (
+            <li className="px-3 py-2 text-on-surface-variant text-xs">Searching…</li>
+          )}
+          {!isFetching && results.length === 0 && (
+            <li className="px-3 py-2 text-on-surface-variant text-xs">
+              {debounced ? "No patients found." : "Start typing to search…"}
+            </li>
+          )}
+          {results.map((p) => (
+            <li
+              key={p.id}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onPick(p);
+                setQ(p.name);
+                setOpen(false);
+              }}
+              className="px-3 py-2 cursor-pointer text-on-surface hover:bg-primary-container/20"
+            >
+              <div className="font-medium">{p.name}</div>
+              <div className="text-[11px] text-on-surface-variant">
+                {[
+                  p.patient_code,
+                  p.sex_display,
+                  p.age != null ? `${p.age} ${p.age_unit}` : null,
+                  p.phone,
+                  p.city,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function DoctorAutocomplete({
+  value,
+  onChange,
+  doctors,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  doctors: ReferringDoctor[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [highlight, setHighlight] = useState(0);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  const suggestions = useMemo(() => {
+    const q = value.trim().toLowerCase();
+    const pool = doctors.filter((d) => d.name);
+    if (!q) return pool.slice(0, 8);
+    return pool
+      .filter((d) => d.name.toLowerCase().includes(q))
+      .slice(0, 8);
+  }, [value, doctors]);
+
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (!wrapRef.current) return;
+      if (!wrapRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
+
+  function pick(name: string) {
+    onChange(name);
+    setOpen(false);
+  }
+
+  return (
+    <div className="relative" ref={wrapRef}>
+      <input
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setOpen(true);
+          setHighlight(0);
+        }}
+        onFocus={() => setOpen(true)}
+        onKeyDown={(e) => {
+          if (!open) return;
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setHighlight((h) => Math.min(h + 1, suggestions.length - 1));
+          } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            setHighlight((h) => Math.max(h - 1, 0));
+          } else if (e.key === "Enter" && suggestions[highlight]) {
+            e.preventDefault();
+            pick(suggestions[highlight].name);
+          } else if (e.key === "Escape") {
+            setOpen(false);
+          }
+        }}
+        placeholder="Dr. Name (Optional)"
+        className="w-full bg-surface-container-highest border border-outline-variant/30 text-sm text-on-surface px-2.5 py-1.5 rounded-md focus:bg-surface-container-lowest focus:border-secondary focus:ring-1 focus:ring-secondary outline-none transition-all placeholder:text-on-surface-variant/50"
+        autoComplete="off"
+      />
+      {open && suggestions.length > 0 && (
+        <ul className="absolute bottom-full left-0 right-0 mb-1 z-50 bg-surface-container-lowest border border-outline-variant/30 rounded-md shadow-lg max-h-56 overflow-auto py-1 text-sm">
+          {suggestions.map((d, i) => (
+            <li
+              key={d.id}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                pick(d.name);
+              }}
+              onMouseEnter={() => setHighlight(i)}
+              className={
+                (i === highlight
+                  ? "bg-primary-container/20 "
+                  : "") +
+                "px-3 py-1.5 cursor-pointer text-on-surface"
+              }
+            >
+              <div className="font-medium">{d.name}</div>
+              {(d.qualification || d.specialty) && (
+                <div className="text-[11px] text-on-surface-variant">
+                  {[d.qualification, d.specialty].filter(Boolean).join(" · ")}
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

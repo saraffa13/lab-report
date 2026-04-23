@@ -1,9 +1,14 @@
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { exportPatientData, getPatient, getPatientReports } from "@/api/patients";
+import { createPatientLogin, exportPatientData, getPatient, getPatientReports } from "@/api/patients";
 import { downloadPdf, type ReportListItem } from "@/api/reports";
 import { Icon } from "@/components/ui/Icon";
+import { PaymentCell } from "@/components/PaymentCell";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+
+const USER_MANAGE_ROLES = new Set(["admin", "lab_owner"]);
 
 type Tab = "reports" | "consents" | "export";
 
@@ -17,6 +22,12 @@ const STATUS_STYLES: Record<string, string> = {
 export default function PatientDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [tab, setTab] = useState<Tab>("reports");
+  const queryClient = useQueryClient();
+  const { user: me } = useAuth();
+  const canManageUsers =
+    !!me && (me.is_superuser || (me.role_code && USER_MANAGE_ROLES.has(me.role_code)));
+  const [loginResult, setLoginResult] = useState<{ phone: string; password: string } | null>(null);
+  const [loginBusy, setLoginBusy] = useState(false);
   const { data: patient } = useQuery({
     queryKey: ["patient", id],
     queryFn: () => getPatient(id!),
@@ -37,6 +48,24 @@ export default function PatientDetailPage() {
     .slice(0, 2)
     .join("")
     .toUpperCase();
+
+  async function handleCreateLogin() {
+    if (!patient) return;
+    if (!patient.phone) {
+      alert("Add a phone number to this patient before creating a login.");
+      return;
+    }
+    setLoginBusy(true);
+    try {
+      const res = await createPatientLogin(patient.id);
+      setLoginResult({ phone: res.phone, password: res.password });
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { detail?: string } } };
+      alert(err.response?.data?.detail ?? "Failed to create patient login.");
+    } finally {
+      setLoginBusy(false);
+    }
+  }
 
   async function handleExport() {
     if (!patient) return;
@@ -67,7 +96,7 @@ export default function PatientDetailPage() {
             {patient.name}
           </h1>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
           <Link
             to={`/reports/new?patient=${patient.id}`}
             className="px-4 py-2 bg-surface-container-high text-primary-container rounded-md text-sm font-medium hover:bg-surface-container-highest transition-colors flex items-center gap-2"
@@ -75,6 +104,16 @@ export default function PatientDetailPage() {
             <Icon name="add" size={16} />
             New Report
           </Link>
+          {canManageUsers && (
+            <button
+              onClick={handleCreateLogin}
+              disabled={loginBusy}
+              className="px-4 py-2 bg-surface-container-high text-primary-container rounded-md text-sm font-medium hover:bg-surface-container-highest transition-colors flex items-center gap-2 disabled:opacity-60"
+            >
+              <Icon name="lock_reset" size={16} />
+              {loginBusy ? "Working…" : "Create Patient Login"}
+            </button>
+          )}
           <button
             onClick={handleExport}
             className="px-5 py-2 bg-gradient-to-b from-primary-container to-primary text-on-primary rounded-md text-sm font-medium hover:opacity-95 transition-opacity flex items-center gap-2 shadow-[0_4px_12px_rgba(11,42,91,0.2)]"
@@ -84,6 +123,32 @@ export default function PatientDetailPage() {
           </button>
         </div>
       </div>
+
+      {loginResult && (
+        <div className="bg-secondary-container text-on-secondary-container rounded-xl p-4 ring-1 ring-on-secondary-container/20 flex items-start gap-3">
+          <Icon name="check_circle" size={20} className="mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-sm mb-1">Patient login ready</div>
+            <div className="text-sm">
+              Phone: <code className="font-mono">{loginResult.phone}</code>
+              {" · "}
+              Password:{" "}
+              <code className="font-mono bg-surface-container-lowest px-1.5 py-0.5 rounded">
+                {loginResult.password}
+              </code>
+            </div>
+            <div className="text-xs mt-1 opacity-80">
+              Share this with the patient. Save it now — it won't be shown again.
+            </div>
+          </div>
+          <button
+            onClick={() => setLoginResult(null)}
+            className="p-1 rounded hover:bg-surface-container-lowest/40"
+          >
+            <Icon name="close" size={16} />
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left column */}
@@ -187,20 +252,21 @@ export default function PatientDetailPage() {
                       <th className="px-6 py-3 font-semibold">Accession #</th>
                       <th className="px-6 py-3 font-semibold">Template</th>
                       <th className="px-6 py-3 font-semibold">Status</th>
+                      <th className="px-6 py-3 font-semibold text-right">Payment</th>
                       <th className="px-6 py-3 font-semibold text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="text-sm">
                     {!reports && (
                       <tr>
-                        <td colSpan={5} className="px-6 py-10 text-center text-on-surface-variant">
+                        <td colSpan={6} className="px-6 py-10 text-center text-on-surface-variant">
                           Loading reports…
                         </td>
                       </tr>
                     )}
                     {reports?.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="px-6 py-10 text-center">
+                        <td colSpan={6} className="px-6 py-10 text-center">
                           <Icon
                             name="description"
                             size={32}
@@ -253,6 +319,18 @@ export default function PatientDetailPage() {
                               />
                               {r.status}
                             </span>
+                          </td>
+                          <td className="px-6 py-3.5 text-right">
+                            <PaymentCell
+                              report={r}
+                              onChanged={() => {
+                                queryClient.invalidateQueries({
+                                  queryKey: ["patient-reports", id],
+                                });
+                                queryClient.invalidateQueries({ queryKey: ["reports"] });
+                                queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+                              }}
+                            />
                           </td>
                           <td className="px-6 py-3.5 text-right">
                             <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

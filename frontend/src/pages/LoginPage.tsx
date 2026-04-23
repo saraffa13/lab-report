@@ -1,12 +1,13 @@
 import { FormEvent, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
-import { login, storeSession, hasSession } from "@/api/auth";
+import { Navigate } from "react-router-dom";
+import { login, patientLogin, storeSession, hasSession } from "@/api/auth";
 import { Icon } from "@/components/ui/Icon";
 
 export default function LoginPage() {
-  const navigate = useNavigate();
+  const [mode, setMode] = useState<"staff" | "patient">("staff");
   const [email, setEmail] = useState("demo@labreport.local");
   const [password, setPassword] = useState("demo1234");
+  const [phone, setPhone] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -18,11 +19,19 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      const resp = await login(email, password);
+      const resp =
+        mode === "patient"
+          ? await patientLogin(phone.trim(), password)
+          : await login(email, password);
       storeSession(resp);
-      navigate("/dashboard", { replace: true });
+      const redirectTo = resp.user.role_code === "patient" ? "/my-reports" : "/dashboard";
+      // Full reload so the top-level <App /> re-evaluates useAuth with the fresh
+      // session and picks the correct route tree (patient vs staff). Using
+      // react-router's navigate() keeps the stale role and bounces patients to
+      // /dashboard via the wildcard fallback.
+      window.location.replace(redirectTo);
     } catch {
-      setError("Invalid email or password.");
+      setError(mode === "patient" ? "Invalid phone or password." : "Invalid email or password.");
     } finally {
       setLoading(false);
     }
@@ -70,28 +79,77 @@ export default function LoginPage() {
             </p>
           </div>
 
+          <div className="bg-surface-container-low p-1 rounded-lg flex gap-1">
+            <button
+              type="button"
+              onClick={() => setMode("staff")}
+              className={
+                mode === "staff"
+                  ? "flex-1 bg-surface-container-lowest text-primary-container shadow-sm px-4 py-1.5 rounded-md text-sm font-medium"
+                  : "flex-1 text-on-surface-variant px-4 py-1.5 rounded-md text-sm font-medium"
+              }
+            >
+              Staff login
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("patient")}
+              className={
+                mode === "patient"
+                  ? "flex-1 bg-surface-container-lowest text-primary-container shadow-sm px-4 py-1.5 rounded-md text-sm font-medium"
+                  : "flex-1 text-on-surface-variant px-4 py-1.5 rounded-md text-sm font-medium"
+              }
+            >
+              Patient login
+            </button>
+          </div>
+
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-on-surface-variant text-sm font-semibold" htmlFor="email">
-                Email Address
-              </label>
-              <div className="relative group">
-                <Icon
-                  name="mail"
-                  size={18}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant opacity-70"
-                />
-                <input
-                  id="email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-surface-container-highest border border-outline-variant/15 text-on-surface text-sm rounded-lg pl-10 pr-4 py-3 focus:bg-surface-container-lowest focus:border-secondary focus:ring-1 focus:ring-secondary focus:outline-none transition-all placeholder:text-on-surface-variant/50"
-                  placeholder="clinician@ksganga.com"
-                />
+            {mode === "staff" ? (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-on-surface-variant text-sm font-semibold" htmlFor="email">
+                  Email Address
+                </label>
+                <div className="relative group">
+                  <Icon
+                    name="mail"
+                    size={18}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant opacity-70"
+                  />
+                  <input
+                    id="email"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-surface-container-highest border border-outline-variant/15 text-on-surface text-sm rounded-lg pl-10 pr-4 py-3 focus:bg-surface-container-lowest focus:border-secondary focus:ring-1 focus:ring-secondary focus:outline-none transition-all placeholder:text-on-surface-variant/50"
+                    placeholder="clinician@ksganga.com"
+                  />
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-on-surface-variant text-sm font-semibold" htmlFor="phone">
+                  Phone Number
+                </label>
+                <div className="relative group">
+                  <Icon
+                    name="call"
+                    size={18}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant opacity-70"
+                  />
+                  <input
+                    id="phone"
+                    type="tel"
+                    required
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full bg-surface-container-highest border border-outline-variant/15 text-on-surface text-sm rounded-lg pl-10 pr-4 py-3 focus:bg-surface-container-lowest focus:border-secondary focus:ring-1 focus:ring-secondary focus:outline-none transition-all placeholder:text-on-surface-variant/50"
+                    placeholder="+91 98XXX XXXXX"
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="flex flex-col gap-1.5">
               <div className="flex justify-between items-center">

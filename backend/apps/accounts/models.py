@@ -18,16 +18,12 @@ from apps.core.models import BaseModel
 
 
 class Role(models.Model):
-    """System-global roles. All 8 future roles are seeded."""
+    """System-global roles. Four roles are seeded: admin, lab_owner, pa, patient."""
 
     ROLE_CODES = [
         ("admin", "Admin"),
         ("lab_owner", "Lab owner"),
-        ("pathologist", "Pathologist"),
-        ("technician", "Technician"),
-        ("receptionist", "Receptionist"),
-        ("phlebotomist", "Phlebotomist"),
-        ("referring_doctor", "Referring doctor"),
+        ("pa", "Pathologist's Assistant"),
         ("patient", "Patient"),
     ]
 

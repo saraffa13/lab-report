@@ -43,6 +43,28 @@ export default function DashboardPage() {
           </p>
         </div>
 
+        {/* Revenue (admin/lab_owner only) */}
+        {data?.revenue && (
+          <div className="bg-surface-container-lowest rounded-xl p-6 shadow-dossier ring-1 ring-outline-variant/15">
+            <div className="flex items-baseline justify-between mb-4">
+              <h3 className="text-xs font-bold text-on-primary-fixed uppercase tracking-wider flex items-center gap-2">
+                <Icon name="payments" size={16} className="text-secondary" />
+                Revenue (Paid)
+              </h3>
+              <span className="text-xs text-on-surface-variant">
+                {data.revenue.paid_count} paid report
+                {data.revenue.paid_count === 1 ? "" : "s"}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <RevenueStat label="Today" amount={data.revenue.today} />
+              <RevenueStat label="Last 7 days" amount={data.revenue.week} />
+              <RevenueStat label="Last 30 days" amount={data.revenue.month} />
+              <RevenueStat label="All time" amount={data.revenue.total} tone="primary" />
+            </div>
+          </div>
+        )}
+
         {/* KPI cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           <KpiCard
@@ -126,12 +148,81 @@ export default function DashboardPage() {
           <div className="bg-surface-container-lowest rounded-xl shadow-dossier ring-1 ring-outline-variant/15 overflow-hidden xl:col-span-2">
             <div className="p-5 flex justify-between items-center bg-primary-container">
               <h3 className="text-xs font-semibold text-on-primary uppercase tracking-wider">
-                Recent Reports
+                {data?.top_patients ? "Top Patients by Revenue" : "Recent Reports"}
               </h3>
-              <Link to="/reports" className="text-on-primary text-sm hover:underline font-medium">
+              <Link
+                to={data?.top_patients ? "/patients" : "/reports"}
+                className="text-on-primary text-sm hover:underline font-medium"
+              >
                 View All
               </Link>
             </div>
+            {data?.top_patients ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="text-xs text-on-surface-variant uppercase tracking-wider bg-surface-container-low">
+                      <th className="px-4 py-3 font-medium w-10">#</th>
+                      <th className="px-4 py-3 font-medium">Patient</th>
+                      <th className="px-4 py-3 font-medium">Phone</th>
+                      <th className="px-4 py-3 font-medium text-right">Paid</th>
+                      <th className="px-4 py-3 font-medium text-right">Reports</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-sm">
+                    {isLoading && (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-10 text-center text-on-surface-variant">
+                          Loading…
+                        </td>
+                      </tr>
+                    )}
+                    {!isLoading && data.top_patients.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-10 text-center text-on-surface-variant">
+                          No paid reports yet — revenue ranking will appear once payments come in.
+                        </td>
+                      </tr>
+                    )}
+                    {data.top_patients.map((p, i) => (
+                      <tr
+                        key={p.id}
+                        className={`${
+                          i % 2 === 0 ? "bg-surface" : "bg-surface-container-low"
+                        } hover:bg-surface-container transition-colors`}
+                      >
+                        <td className="px-4 py-2.5 font-mono text-on-surface-variant text-xs">
+                          {i + 1}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <Link
+                            to={`/patients/${p.id}`}
+                            className="font-semibold text-on-surface hover:text-primary-container hover:underline"
+                          >
+                            {p.name}
+                          </Link>
+                          <div className="text-[11px] text-on-surface-variant font-mono">
+                            {p.patient_code}
+                          </div>
+                        </td>
+                        <td className="px-4 py-2.5 text-on-surface-variant font-mono text-xs">
+                          {p.phone || "—"}
+                        </td>
+                        <td className="px-4 py-2.5 text-right font-mono font-bold text-on-primary-fixed">
+                          ₹{Number(p.total_paid).toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                        </td>
+                        <td className="px-4 py-2.5 text-right">
+                          <span className="inline-flex items-center gap-1 bg-primary-container/20 text-primary-container text-xs font-semibold px-2 py-0.5 rounded">
+                            <Icon name="description" size={12} />
+                            {p.reports_generated}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
@@ -203,6 +294,7 @@ export default function DashboardPage() {
                 </tbody>
               </table>
             </div>
+            )}
           </div>
         </div>
       </div>
@@ -297,6 +389,49 @@ function KpiCard({
           <Icon name={trendIcon} size={14} className="mr-1" />
           <span>{trend}</span>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function RevenueStat({
+  label,
+  amount,
+  tone = "default",
+}: {
+  label: string;
+  amount: string;
+  tone?: "default" | "primary";
+}) {
+  const n = Number(amount || 0);
+  const pretty = Number.isFinite(n)
+    ? `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`
+    : `₹${amount}`;
+  return (
+    <div
+      className={
+        tone === "primary"
+          ? "bg-primary-container text-on-primary rounded-lg p-4"
+          : "bg-surface-container-low rounded-lg p-4 ring-1 ring-outline-variant/10"
+      }
+    >
+      <div
+        className={
+          tone === "primary"
+            ? "text-[11px] uppercase tracking-wider opacity-80"
+            : "text-[11px] text-on-surface-variant uppercase tracking-wider"
+        }
+      >
+        {label}
+      </div>
+      <div
+        className={
+          tone === "primary"
+            ? "text-2xl font-bold font-mono mt-1"
+            : "text-2xl font-bold font-mono text-on-primary-fixed mt-1"
+        }
+      >
+        {pretty}
       </div>
     </div>
   );

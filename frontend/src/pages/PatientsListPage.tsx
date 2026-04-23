@@ -1,15 +1,65 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { listPatients } from "@/api/patients";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { deletePatient, listPatients } from "@/api/patients";
 import { Icon } from "@/components/ui/Icon";
+import { BulkActionsBar } from "@/components/BulkActionsBar";
+import { useAuth } from "@/hooks/useAuth";
+
+const CAN_DELETE_ROLES = new Set(["admin", "lab_owner"]);
 
 export default function PatientsListPage() {
   const [search, setSearch] = useState("");
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const canDelete =
+    !!user && (user.is_superuser || (user.role_code && CAN_DELETE_ROLES.has(user.role_code)));
   const { data, isLoading } = useQuery({
     queryKey: ["patients", search],
     queryFn: () => listPatients(search),
   });
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+  function clearSelection() {
+    setSelected(new Set());
+  }
+  function toggleAllVisible() {
+    setSelected((prev) => {
+      const ids = (data ?? []).map((p) => p.id);
+      const allSelectedHere = ids.length > 0 && ids.every((id) => prev.has(id));
+      if (allSelectedHere) return new Set();
+      return new Set(ids);
+    });
+  }
+  async function bulkDelete() {
+    if (selected.size === 0) return;
+    if (
+      !window.confirm(
+        `Delete ${selected.size} patient${selected.size === 1 ? "" : "s"}? Their reports will remain. This cannot be undone.`,
+      )
+    )
+      return;
+    setBulkBusy(true);
+    try {
+      const ids = Array.from(selected);
+      const results = await Promise.allSettled(ids.map((id) => deletePatient(id)));
+      const failed = results.filter((r) => r.status === "rejected").length;
+      await queryClient.invalidateQueries({ queryKey: ["patients"] });
+      clearSelection();
+      if (failed > 0) alert(`${failed} delete${failed === 1 ? "" : "s"} failed.`);
+    } finally {
+      setBulkBusy(false);
+    }
+  }
 
   const newThisWeek = useMemo(() => {
     if (!data) return 0;
@@ -19,6 +69,15 @@ export default function PatientsListPage() {
 
   return (
     <div className="flex flex-col gap-8">
+      {canDelete && (
+        <BulkActionsBar
+          count={selected.size}
+          label="patient"
+          onClear={clearSelection}
+          onDelete={bulkDelete}
+          busy={bulkBusy}
+        />
+      )}
       <header className="flex flex-col lg:flex-row gap-6 justify-between items-start lg:items-end">
         <div className="flex flex-col gap-2">
           <h1 className="text-4xl font-bold text-on-primary-fixed tracking-tight">
@@ -65,6 +124,17 @@ export default function PatientsListPage() {
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
               <tr className="bg-primary-container text-on-primary text-xs uppercase tracking-wider">
+                {canDelete && (
+                  <th className="py-3.5 px-3 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      checked={(data?.length ?? 0) > 0 && (data ?? []).every((p) => selected.has(p.id))}
+                      onChange={toggleAllVisible}
+                      aria-label="Select all visible"
+                      className="accent-on-primary cursor-pointer"
+                    />
+                  </th>
+                )}
                 <th className="py-3.5 px-5 font-semibold">Patient Code</th>
                 <th className="py-3.5 px-5 font-semibold">Name</th>
                 <th className="py-3.5 px-5 font-semibold">Sex / Age</th>
@@ -78,14 +148,14 @@ export default function PatientsListPage() {
             <tbody className="text-sm">
               {isLoading && (
                 <tr>
-                  <td colSpan={8} className="py-10 px-5 text-center text-on-surface-variant">
+                  <td colSpan={canDelete ? 9 : 8} className="py-10 px-5 text-center text-on-surface-variant">
                     Loading patients…
                   </td>
                 </tr>
               )}
               {!isLoading && data?.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="py-16 px-5 text-center">
+                  <td colSpan={canDelete ? 9 : 8} className="py-16 px-5 text-center">
                     <Icon
                       name="groups"
                       size={40}
@@ -115,8 +185,19 @@ export default function PatientsListPage() {
                     key={p.id}
                     className={`${
                       i % 2 === 0 ? "bg-surface" : "bg-surface-container-low"
-                    } hover:bg-surface-container-high transition-colors group`}
+                    } ${selected.has(p.id) ? "ring-2 ring-inset ring-primary-container" : ""} hover:bg-surface-container-high transition-colors group`}
                   >
+                    {canDelete && (
+                      <td className="py-3 px-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(p.id)}
+                          onChange={() => toggleOne(p.id)}
+                          aria-label={`Select ${p.name}`}
+                          className="accent-primary-container cursor-pointer"
+                        />
+                      </td>
+                    )}
                     <td className="py-3 px-5">
                       <Link
                         to={`/patients/${p.id}`}

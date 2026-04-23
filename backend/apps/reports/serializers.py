@@ -57,6 +57,7 @@ class ReportListSerializer(serializers.ModelSerializer):
         fields = (
             "id", "accession_number", "patient_name", "template_name",
             "status", "signed_at", "created_at",
+            "total_amount", "payment_status", "paid_at",
         )
 
 
@@ -72,5 +73,14 @@ class ReportDetailSerializer(serializers.ModelSerializer):
             "patient", "patient_name", "report_template", "template_name",
             "referred_by_text", "clinical_history",
             "status", "signed_at", "created_at",
+            "total_amount", "payment_status", "paid_at",
             "results",
         )
+
+
+class PaymentUpdateSerializer(serializers.Serializer):
+    total_amount = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
+    payment_status = serializers.ChoiceField(
+        choices=(("paid", "Paid"), ("partial", "Partial"), ("pending", "Pending")),
+        required=False,
+    )

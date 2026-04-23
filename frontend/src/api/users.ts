@@ -42,3 +42,7 @@ export async function listRoles(): Promise<Role[]> {
   const { data } = await apiClient.get<Paginated<Role>>("/v1/roles/");
   return unwrap(data);
 }
+
+export async function deleteUser(id: string): Promise<void> {
+  await apiClient.delete(`/v1/users/${id}/`);
+}

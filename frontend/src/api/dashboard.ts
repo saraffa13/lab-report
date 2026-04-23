@@ -9,6 +9,21 @@ export type DashboardStats = {
   patients_total: number;
   reports_by_status: Array<{ status: string; count: number }>;
   recent_reports: ReportListItem[];
+  revenue?: {
+    today: string;
+    week: string;
+    month: string;
+    total: string;
+    paid_count: number;
+  };
+  top_patients?: Array<{
+    id: string;
+    patient_code: string;
+    name: string;
+    phone: string;
+    total_paid: string;
+    reports_generated: number;
+  }>;
 };
 
 export async function getDashboardStats(): Promise<DashboardStats> {

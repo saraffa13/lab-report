@@ -1,9 +1,17 @@
-import { Link, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/api/client";
-import { downloadPdf, type ReportDetail } from "@/api/reports";
+import {
+  deleteReport,
+  downloadPdf,
+  updateReportPayment,
+  type ReportDetail,
+} from "@/api/reports";
 import { useEffect, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
+import { useAuth } from "@/hooks/useAuth";
+
+const CAN_DELETE_ROLES = new Set(["admin", "lab_owner"]);
 
 const STATUS_STYLES: Record<string, string> = {
   final: "bg-secondary-container text-on-secondary-container ring-on-secondary-container/20",
@@ -14,11 +22,61 @@ const STATUS_STYLES: Record<string, string> = {
 
 export default function ReportDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const canDelete =
+    !!user && (user.is_superuser || (user.role_code && CAN_DELETE_ROLES.has(user.role_code)));
+
   const { data: report, isLoading } = useQuery({
     queryKey: ["report", id],
     queryFn: async () => (await apiClient.get<ReportDetail>(`/v1/reports/${id}/`)).data,
   });
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [priceInput, setPriceInput] = useState<string>("");
+  const [savingPay, setSavingPay] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (report?.total_amount != null) setPriceInput(String(report.total_amount));
+  }, [report?.total_amount]);
+
+  async function savePayment(markPaid: boolean) {
+    if (!id) return;
+    setPayError(null);
+    setSavingPay(true);
+    try {
+      const amt = priceInput.trim() ? Number(priceInput) : null;
+      if (priceInput.trim() && !Number.isFinite(amt as number)) {
+        setPayError("Enter a valid amount.");
+        return;
+      }
+      await updateReportPayment(id, {
+        total_amount: amt,
+        ...(markPaid ? { payment_status: "paid" as const } : {}),
+      });
+      await queryClient.invalidateQueries({ queryKey: ["report", id] });
+      await queryClient.invalidateQueries({ queryKey: ["reports"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { detail?: string } } };
+      setPayError(err.response?.data?.detail ?? "Failed to update payment.");
+    } finally {
+      setSavingPay(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!id) return;
+    if (!window.confirm("Delete this report? This cannot be undone.")) return;
+    try {
+      await deleteReport(id);
+      await queryClient.invalidateQueries({ queryKey: ["reports"] });
+      navigate("/reports", { replace: true });
+    } catch {
+      alert("Failed to delete report.");
+    }
+  }
 
   useEffect(() => {
     if (!id) return;
@@ -90,6 +148,15 @@ export default function ReportDetailPage() {
             <Icon name="download" size={16} />
             Download PDF
           </button>
+          {canDelete && (
+            <button
+              onClick={handleDelete}
+              className="bg-error-container text-on-error-container font-medium text-sm px-4 py-2 rounded-md hover:opacity-90 transition-opacity flex items-center gap-2"
+            >
+              <Icon name="delete" size={16} />
+              Delete
+            </button>
+          )}
         </div>
       </section>
 
@@ -138,6 +205,61 @@ export default function ReportDetailPage() {
               </p>
             </div>
           )}
+
+          <div className="bg-surface-container-lowest rounded-xl p-6 ring-1 ring-outline-variant/15 shadow-dossier">
+            <h2 className="text-xs font-bold text-on-primary-fixed uppercase tracking-wider mb-4 flex items-center gap-2">
+              <Icon name="payments" size={16} className="text-primary-container" />
+              Billing
+            </h2>
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-on-surface-variant uppercase tracking-wider">
+                  Status
+                </span>
+                <PaymentBadge status={report.payment_status} />
+              </div>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs text-on-surface-variant uppercase tracking-wider">
+                  Price (₹)
+                </span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  value={priceInput}
+                  onChange={(e) => setPriceInput(e.target.value)}
+                  placeholder="0.00"
+                  className="bg-surface-container-highest border border-outline-variant/15 text-on-surface p-2.5 rounded-md focus:bg-surface-container-lowest focus:border-secondary focus:ring-1 focus:ring-secondary outline-none text-sm"
+                />
+              </label>
+              {report.paid_at && (
+                <div className="text-[11px] text-on-surface-variant">
+                  Paid on {new Date(report.paid_at).toLocaleString()}
+                </div>
+              )}
+              {payError && (
+                <div className="text-xs text-error">{payError}</div>
+              )}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => savePayment(false)}
+                  disabled={savingPay}
+                  className="flex-1 bg-surface-container-high text-primary-container text-sm font-medium px-3 py-2 rounded-md hover:bg-surface-container-highest transition-colors disabled:opacity-60"
+                >
+                  Save Price
+                </button>
+                <button
+                  type="button"
+                  onClick={() => savePayment(true)}
+                  disabled={savingPay || report.payment_status === "paid"}
+                  className="flex-1 bg-gradient-to-b from-primary-container to-primary text-on-primary text-sm font-bold px-3 py-2 rounded-md hover:opacity-95 transition-opacity disabled:opacity-60 flex items-center justify-center gap-1"
+                >
+                  <Icon name="check_circle" size={14} />
+                  {report.payment_status === "paid" ? "Paid" : "Mark Paid"}
+                </button>
+              </div>
+            </div>
+          </div>
 
           <div className="bg-surface-container-low rounded-xl p-6 ring-1 ring-outline-variant/10">
             <h2 className="text-xs font-bold text-on-primary-fixed uppercase tracking-wider mb-4 flex items-center gap-2">
@@ -308,6 +430,28 @@ function SummaryStat({
         {value}
       </div>
     </div>
+  );
+}
+
+function PaymentBadge({ status }: { status: ReportDetail["payment_status"] }) {
+  if (status === "paid") {
+    return (
+      <span className="inline-flex items-center gap-1 bg-secondary-container text-on-secondary-container text-[11px] font-bold px-2 py-0.5 rounded ring-1 ring-on-secondary-container/20">
+        <Icon name="check_circle" size={12} /> Paid
+      </span>
+    );
+  }
+  if (status === "partial") {
+    return (
+      <span className="inline-flex items-center gap-1 bg-tertiary-fixed text-on-tertiary-fixed text-[11px] font-bold px-2 py-0.5 rounded">
+        Partial
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 bg-surface-container-highest text-on-surface-variant text-[11px] font-bold px-2 py-0.5 rounded ring-1 ring-outline-variant/30">
+      Pending
+    </span>
   );
 }
 

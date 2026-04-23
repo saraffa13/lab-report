@@ -8,6 +8,9 @@ export type ReportListItem = {
   status: string;
   signed_at: string | null;
   created_at: string;
+  total_amount: string | null;
+  payment_status: "paid" | "partial" | "pending" | null;
+  paid_at: string | null;
 };
 
 export type ReportDetail = ReportListItem & {
@@ -57,9 +60,78 @@ export async function listReports(): Promise<ReportListItem[]> {
   return unwrap(data);
 }
 
+export async function listMyReports(): Promise<ReportListItem[]> {
+  const { data } = await apiClient.get<ReportListItem[]>("/v1/my-reports/");
+  return data;
+}
+
+export async function getMyReport(id: string): Promise<ReportDetail> {
+  const { data } = await apiClient.get<ReportDetail>(`/v1/my-reports/${id}/`);
+  return data;
+}
+
+export async function downloadMyReportPdf(id: string, filename: string) {
+  const resp = await apiClient.get(`/v1/my-reports/${id}/pdf/`, { responseType: "blob" });
+  const blob = new Blob([resp.data], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export async function openMyReportPdf(id: string) {
+  const resp = await apiClient.get(`/v1/my-reports/${id}/pdf/`, { responseType: "blob" });
+  const blob = new Blob([resp.data], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank", "noopener,noreferrer");
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+export type ReferringDoctor = {
+  id: string;
+  name: string;
+  qualification: string;
+  specialty: string;
+  phone: string;
+};
+
+export async function listReferringDoctors(search = ""): Promise<ReferringDoctor[]> {
+  const { data } = await apiClient.get<Paginated<ReferringDoctor>>(
+    "/v1/referring-doctors/",
+    { params: search ? { search } : {} },
+  );
+  return unwrap(data);
+}
+
+export async function createReferringDoctor(name: string): Promise<ReferringDoctor> {
+  const { data } = await apiClient.post<ReferringDoctor>("/v1/referring-doctors/", { name });
+  return data;
+}
+
 export async function createReport(payload: CreateReportPayload): Promise<ReportDetail> {
   const { data } = await apiClient.post<ReportDetail>("/v1/reports/", payload);
   return data;
+}
+
+export async function getReport(id: string): Promise<ReportDetail> {
+  const { data } = await apiClient.get<ReportDetail>(`/v1/reports/${id}/`);
+  return data;
+}
+
+export async function updateReportPayment(
+  id: string,
+  payload: { total_amount?: number | null; payment_status?: "paid" | "partial" | "pending" },
+): Promise<ReportDetail> {
+  const { data } = await apiClient.post<ReportDetail>(`/v1/reports/${id}/payment/`, payload);
+  return data;
+}
+
+export async function deleteReport(id: string): Promise<void> {
+  await apiClient.delete(`/v1/reports/${id}/`);
 }
 
 export function pdfUrl(reportId: string): string {

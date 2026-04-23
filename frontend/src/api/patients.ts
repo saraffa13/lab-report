@@ -63,3 +63,11 @@ export async function exportPatientData(id: string) {
   const { data } = await apiClient.get(`/v1/patients/${id}/export/`);
   return data;
 }
+
+export async function createPatientLogin(
+  id: string,
+  password?: string,
+): Promise<{ user_id: string; phone: string; password: string; reused: boolean; detail: string }> {
+  const { data } = await apiClient.post(`/v1/patients/${id}/create-login/`, password ? { password } : {});
+  return data;
+}

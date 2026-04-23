@@ -1,10 +1,22 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createUser, listRoles, listUsers, updateUser, type LabUser } from "@/api/users";
+import { createUser, deleteUser, listRoles, listUsers, updateUser, type LabUser } from "@/api/users";
 import { Icon } from "@/components/ui/Icon";
+import { useAuth } from "@/hooks/useAuth";
+
+const CAN_DELETE_ROLES = new Set(["admin", "lab_owner"]);
+const CAN_ASSIGN_PRIVILEGED_ROLES = new Set(["admin", "lab_owner"]);
 
 export default function UsersPage() {
   const qc = useQueryClient();
+  const { user: me } = useAuth();
+  const canDelete =
+    !!me && (me.is_superuser || (me.role_code && CAN_DELETE_ROLES.has(me.role_code)));
+  // Anyone but a patient (and they can't see this page anyway) may invite.
+  const canInvite = !!me && me.role_code !== "patient";
+  // Only admin/lab_owner/superuser may assign privileged roles.
+  const canAssignPrivileged =
+    !!me && (me.is_superuser || (me.role_code && CAN_ASSIGN_PRIVILEGED_ROLES.has(me.role_code)));
   const { data: users } = useQuery({ queryKey: ["users"], queryFn: listUsers });
   const { data: roles } = useQuery({ queryKey: ["roles"], queryFn: listRoles });
   const [creating, setCreating] = useState(false);
@@ -25,6 +37,20 @@ export default function UsersPage() {
   async function handleToggleActive(u: LabUser) {
     await updateUser(u.id, { is_active: !u.is_active });
     qc.invalidateQueries({ queryKey: ["users"] });
+  }
+
+  async function handleDelete(u: LabUser) {
+    if (me?.id === u.id) {
+      alert("You cannot delete your own account.");
+      return;
+    }
+    if (!window.confirm(`Delete user ${u.email}? This cannot be undone.`)) return;
+    try {
+      await deleteUser(u.id);
+      qc.invalidateQueries({ queryKey: ["users"] });
+    } catch {
+      alert("Failed to delete user.");
+    }
   }
 
   return (
@@ -53,19 +79,29 @@ export default function UsersPage() {
               className="bg-surface-container-highest ring-1 ring-outline-variant/15 rounded-lg py-2 pl-9 pr-4 text-sm text-on-surface w-60 placeholder:text-outline focus:bg-surface-container-lowest focus:ring-secondary outline-none transition-all"
             />
           </div>
-          <button
-            onClick={() => setCreating(true)}
-            className="bg-gradient-to-b from-primary-container to-primary text-on-primary px-5 py-2.5 rounded-lg flex items-center gap-2 font-medium text-sm hover:opacity-95 transition-opacity shadow-sm"
-          >
-            <Icon name="person_add" size={18} filled />
-            Invite User
-          </button>
+          {canInvite && (
+            <button
+              onClick={() => setCreating(true)}
+              className="bg-gradient-to-b from-primary-container to-primary text-on-primary px-5 py-2.5 rounded-lg flex items-center gap-2 font-medium text-sm hover:opacity-95 transition-opacity shadow-sm"
+            >
+              <Icon name="person_add" size={18} filled />
+              Invite User
+            </button>
+          )}
         </div>
       </header>
 
-      {creating && (
+      {creating && canInvite && (
         <CreateUserForm
-          roles={roles ?? []}
+          roles={(roles ?? []).filter((r) => {
+            // Patient logins are created from the patient detail page, not here.
+            if (r.code === "patient") return false;
+            // PA users can only assign PA role; admin/lab_owner can assign any.
+            if ((r.code === "admin" || r.code === "lab_owner") && !canAssignPrivileged) {
+              return false;
+            }
+            return true;
+          })}
           onCancel={() => setCreating(false)}
           onCreated={() => {
             setCreating(false);
@@ -174,12 +210,23 @@ export default function UsersPage() {
                       })}
                     </td>
                     <td className="py-3 px-5 text-right">
-                      <button
-                        onClick={() => handleToggleActive(u)}
-                        className="text-primary-container hover:text-secondary text-sm font-medium transition-colors"
-                      >
-                        {u.is_active ? "Disable" : "Enable"}
-                      </button>
+                      <div className="flex items-center justify-end gap-3">
+                        <button
+                          onClick={() => handleToggleActive(u)}
+                          className="text-primary-container hover:text-secondary text-sm font-medium transition-colors"
+                        >
+                          {u.is_active ? "Disable" : "Enable"}
+                        </button>
+                        {canDelete && (
+                          <button
+                            onClick={() => handleDelete(u)}
+                            className="text-error hover:text-on-error-container text-sm font-medium transition-colors"
+                            title="Delete user"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

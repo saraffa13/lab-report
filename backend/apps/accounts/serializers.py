@@ -30,3 +30,8 @@ class MeSerializer(serializers.ModelSerializer):
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
+
+
+class PatientLoginSerializer(serializers.Serializer):
+    phone = serializers.CharField(max_length=20)
+    password = serializers.CharField(write_only=True)

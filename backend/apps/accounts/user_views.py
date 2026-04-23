@@ -1,8 +1,10 @@
 """User management (admin-only)."""
 from __future__ import annotations
 
-from rest_framework import filters, serializers, viewsets
+from django.utils import timezone
+from rest_framework import filters, serializers, status, viewsets
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from .models import Role, User
 
@@ -65,9 +67,78 @@ class UserViewSet(viewsets.ModelViewSet):
             qs = qs.filter(lab_id=requester.lab_id)
         return qs
 
+    def _assert_can_assign_role(self, target_role):
+        """Prevent PA (or any non-admin) from minting admin/lab_owner users and
+        from creating patient-portal accounts through this endpoint (those must
+        come from the patient detail page's Create Patient Login action)."""
+        if target_role is None:
+            return None
+        code = getattr(target_role, "code", None)
+        if code == "patient":
+            return Response(
+                {"detail": "Patient logins must be created from the patient detail page."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        requester = self.request.user
+        requester_code = getattr(getattr(requester, "role", None), "code", None)
+        if code in ("admin", "lab_owner") and not (
+            requester.is_superuser or requester_code in ("admin", "lab_owner")
+        ):
+            return Response(
+                {"detail": "You do not have permission to assign this role."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return None
+
+    def create(self, request, *args, **kwargs):
+        requester = request.user
+        requester_code = getattr(getattr(requester, "role", None), "code", None)
+        # Patients must never be able to mint staff accounts.
+        if not requester.is_superuser and requester_code == "patient":
+            return Response(
+                {"detail": "You do not have permission to create users."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        # Resolve the role from the incoming payload so we can validate it.
+        role_id = request.data.get("role")
+        role = Role.objects.filter(pk=role_id).first() if role_id else None
+        err = self._assert_can_assign_role(role)
+        if err is not None:
+            return err
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        if "role" in request.data and request.data["role"]:
+            role = Role.objects.filter(pk=request.data["role"]).first()
+            err = self._assert_can_assign_role(role)
+            if err is not None:
+                return err
+        return super().update(request, *args, **kwargs)
+
     def perform_create(self, serializer):
         # New users land in the creating admin's lab
         serializer.save(lab=self.request.user.lab)
+
+    def destroy(self, request, *args, **kwargs):
+        requester = request.user
+        has_delete = requester.is_superuser or getattr(
+            requester, "has_permission_code", lambda c: False
+        )("user.delete")
+        if not has_delete:
+            return Response(
+                {"detail": "You do not have permission to delete users."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        target = self.get_object()
+        if target.id == requester.id:
+            return Response(
+                {"detail": "You cannot delete your own account."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        target.deleted_at = timezone.now()
+        target.is_active = False
+        target.save(update_fields=["deleted_at", "is_active"])
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class RoleViewSet(viewsets.ReadOnlyModelViewSet):

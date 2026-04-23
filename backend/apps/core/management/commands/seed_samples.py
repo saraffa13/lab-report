@@ -98,7 +98,9 @@ class Command(BaseCommand):
         # ── Patients ───────────────────────────────────────────────
         patients: dict[str, Patient] = {}
         for code, name, sex, age, phone, city, blood in PATIENTS:
-            p, _ = Patient.objects.update_or_create(
+            # Use all_objects so previously soft-deleted rows get revived instead of
+            # colliding with the (lab, patient_code) unique constraint.
+            p, _ = Patient.all_objects.update_or_create(
                 lab=lab, patient_code=code,
                 defaults={
                     "name": name,
@@ -110,6 +112,7 @@ class Command(BaseCommand):
                     "state": "Jharkhand",
                     "blood_group": blood,
                     "created_by": admin,
+                    "deleted_at": None,
                 },
             )
             patients[code] = p
@@ -136,7 +139,7 @@ class Command(BaseCommand):
             signed = verified + timedelta(minutes=10) if verified and status == "final" else None
             released = signed
 
-            report, _ = Report.objects.update_or_create(
+            report, _ = Report.all_objects.update_or_create(
                 lab=lab, accession_number=acc,
                 defaults={
                     "patient": patient,
@@ -161,6 +164,7 @@ class Command(BaseCommand):
                     "total_amount": Decimal("500.00"),
                     "discount_amount": Decimal("0.00"),
                     "created_by": admin,
+                    "deleted_at": None,
                 },
             )
             reports_created += 1

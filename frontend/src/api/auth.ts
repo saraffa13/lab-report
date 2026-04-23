@@ -30,8 +30,26 @@ export async function login(email: string, password: string): Promise<LoginRespo
   return data;
 }
 
+export async function patientLogin(phone: string, password: string): Promise<LoginResponse> {
+  const { data } = await apiClient.post<LoginResponse>("/v1/auth/login/patient/", { phone, password });
+  return data;
+}
+
 export async function fetchMe(): Promise<User> {
   const { data } = await apiClient.get<User>("/v1/auth/me/");
+  return data;
+}
+
+export async function updateMyProfile(body: { full_name?: string; email?: string }): Promise<User> {
+  const { data } = await apiClient.patch<User>("/v1/my/profile/", body);
+  return data;
+}
+
+export async function changeMyPassword(body: {
+  current_password: string;
+  new_password: string;
+}): Promise<{ detail: string }> {
+  const { data } = await apiClient.post<{ detail: string }>("/v1/my/change-password/", body);
   return data;
 }
 

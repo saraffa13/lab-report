@@ -32,11 +32,7 @@ from apps.tenancy.models import Lab
 ROLES = [
     ("admin", "Admin"),
     ("lab_owner", "Lab owner"),
-    ("pathologist", "Pathologist"),
-    ("technician", "Technician"),
-    ("receptionist", "Receptionist"),
-    ("phlebotomist", "Phlebotomist"),
-    ("referring_doctor", "Referring doctor"),
+    ("pa", "Pathologist's Assistant"),
     ("patient", "Patient"),
 ]
 
@@ -45,12 +41,38 @@ CORE_PERMISSIONS = [
     ("report.view_all", "View all reports", "reports"),
     ("report.sign", "Sign report", "reports"),
     ("report.amend", "Amend report", "reports"),
+    ("report.delete", "Delete report", "reports"),
+    ("report.view_revenue", "View revenue", "reports"),
     ("patient.view_all", "View all patients", "patients"),
     ("patient.create", "Create patient", "patients"),
     ("catalog.manage", "Manage catalog", "catalog"),
     ("user.manage", "Manage users", "admin"),
+    ("user.delete", "Delete users", "admin"),
     ("lab.manage", "Manage lab settings", "admin"),
 ]
+
+# Role → default permissions.
+ROLE_PERMS: dict[str, list[str]] = {
+    "admin": [  # everything
+        "report.create", "report.view_all", "report.sign", "report.amend",
+        "report.delete", "report.view_revenue",
+        "patient.view_all", "patient.create",
+        "catalog.manage",
+        "user.manage", "user.delete", "lab.manage",
+    ],
+    "lab_owner": [
+        "report.create", "report.view_all", "report.sign", "report.amend",
+        "report.delete", "report.view_revenue",
+        "patient.view_all", "patient.create",
+        "catalog.manage",
+        "user.manage", "user.delete", "lab.manage",
+    ],
+    "pa": [
+        "report.create", "report.view_all", "report.sign",
+        "patient.view_all", "patient.create",
+    ],
+    "patient": [],
+}
 
 CATEGORIES = [
     {"code": "HAEM", "name": "Haematology", "order": 10},
@@ -307,9 +329,15 @@ class Command(BaseCommand):
                 code=code, defaults={"name": name, "category": category}
             )
             perms[code] = p
-        # Admin gets everything
-        for p in perms.values():
-            RolePermission.objects.get_or_create(role=roles["admin"], permission=p)
+        # Grant each role its configured permissions.
+        for role_code, perm_codes in ROLE_PERMS.items():
+            role = roles.get(role_code)
+            if not role:
+                continue
+            for perm_code in perm_codes:
+                p = perms.get(perm_code)
+                if p:
+                    RolePermission.objects.get_or_create(role=role, permission=p)
 
         # Lab
         lab, created = Lab.objects.update_or_create(

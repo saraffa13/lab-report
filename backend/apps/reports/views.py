@@ -13,15 +13,22 @@ from apps.rendering.services import ensure_report_pdf
 from .models import Report, ReportResult
 from .serializers import (
     CreateReportSerializer,
+    PaymentUpdateSerializer,
     ReportDetailSerializer,
     ReportListSerializer,
 )
 from .services import PatientInput, ReportService, ResultInput
 
 
+def _has_perm(user, code: str) -> bool:
+    check = getattr(user, "has_permission_code", None)
+    return bool(check and check(code))
+
+
 class ReportViewSet(
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
+    mixins.DestroyModelMixin,
     viewsets.GenericViewSet,
 ):
     permission_classes = (IsAuthenticated,)
@@ -31,7 +38,12 @@ class ReportViewSet(
     ordering = ("-created_at",)
 
     def get_queryset(self):
-        lab_id = getattr(self.request.user, "lab_id", None)
+        user = self.request.user
+        # Patient-portal users are not allowed to browse the staff report list.
+        role_code = getattr(getattr(user, "role", None), "code", None)
+        if role_code == "patient":
+            return Report.objects.none()
+        lab_id = getattr(user, "lab_id", None)
         qs = Report.all_objects.filter(deleted_at__isnull=True)
         if lab_id is not None:
             qs = qs.filter(lab_id=lab_id)
@@ -108,6 +120,45 @@ class ReportViewSet(
             report.save(update_fields=["pdf_file"])
         ensure_report_pdf(report)
         return Response(ReportDetailSerializer(report).data)
+
+    @extend_schema(tags=["reports"], summary="Set price / mark as paid", request=PaymentUpdateSerializer, responses=ReportDetailSerializer)
+    @action(detail=True, methods=["post"], url_path="payment")
+    def payment(self, request, pk=None):
+        from django.utils import timezone as tz
+        try:
+            report = self.get_queryset().get(pk=pk)
+        except Report.DoesNotExist:
+            raise Http404
+        ser = PaymentUpdateSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        data = ser.validated_data
+
+        update_fields: list[str] = []
+        if "total_amount" in data:
+            report.total_amount = data["total_amount"]
+            update_fields.append("total_amount")
+        if "payment_status" in data:
+            report.payment_status = data["payment_status"]
+            update_fields.append("payment_status")
+            if data["payment_status"] == "paid":
+                report.paid_at = tz.now()
+                update_fields.append("paid_at")
+            elif report.paid_at is not None:
+                report.paid_at = None
+                update_fields.append("paid_at")
+        if update_fields:
+            report.save(update_fields=update_fields)
+        return Response(ReportDetailSerializer(report).data)
+
+    def destroy(self, request, *args, **kwargs):
+        if not _has_perm(request.user, "report.delete"):
+            return Response(
+                {"detail": "You do not have permission to delete reports."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        report = self.get_object()
+        report.delete()  # soft-delete via BaseModel.delete
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @extend_schema(tags=["reports"], summary="Amend a finalized report (creates a corrected sibling)")
     @action(detail=True, methods=["post"], url_path="amend")

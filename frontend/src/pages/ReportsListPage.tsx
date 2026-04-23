@@ -1,8 +1,13 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { downloadPdf, listReports } from "@/api/reports";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { deleteReport, downloadPdf, listReports } from "@/api/reports";
 import { Icon } from "@/components/ui/Icon";
+import { PaymentCell } from "@/components/PaymentCell";
+import { BulkActionsBar } from "@/components/BulkActionsBar";
+import { useAuth } from "@/hooks/useAuth";
+
+const CAN_DELETE_ROLES = new Set(["admin", "lab_owner"]);
 
 const STATUS_STYLES: Record<string, string> = {
   final: "bg-secondary-container text-on-secondary-container ring-on-secondary-container/20",
@@ -17,15 +22,65 @@ function statusClass(s: string) {
 
 export default function ReportsListPage() {
   const { data, isLoading, error } = useQuery({ queryKey: ["reports"], queryFn: listReports });
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const canDelete =
+    !!user && (user.is_superuser || (user.role_code && CAN_DELETE_ROLES.has(user.role_code)));
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [templateFilter, setTemplateFilter] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+  function clearSelection() {
+    setSelected(new Set());
+  }
+  async function bulkDelete() {
+    if (selected.size === 0) return;
+    if (!window.confirm(`Delete ${selected.size} report${selected.size === 1 ? "" : "s"}? This cannot be undone.`)) return;
+    setBulkBusy(true);
+    try {
+      const ids = Array.from(selected);
+      const results = await Promise.allSettled(ids.map((id) => deleteReport(id)));
+      const failed = results.filter((r) => r.status === "rejected").length;
+      await queryClient.invalidateQueries({ queryKey: ["reports"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      clearSelection();
+      if (failed > 0) alert(`${failed} delete${failed === 1 ? "" : "s"} failed.`);
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
+  async function handleDelete(id: string, accession: string) {
+    if (!window.confirm(`Delete report ${accession}? This cannot be undone.`)) return;
+    try {
+      await deleteReport(id);
+      await queryClient.invalidateQueries({ queryKey: ["reports"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    } catch {
+      alert("Failed to delete report.");
+    }
+  }
 
   const templateOptions = useMemo(() => {
     const set = new Set<string>();
     (data ?? []).forEach((r) => r.template_name && set.add(r.template_name));
     return Array.from(set).sort();
   }, [data]);
+
+  const allVisibleSelected = useMemo(() => {
+    const visible = (data ?? []).filter((r) => selected.has(r.id));
+    return selected.size > 0 && visible.length === selected.size;
+  }, [data, selected]);
 
   const filtered = useMemo(() => {
     return (data ?? []).filter((r) => {
@@ -49,8 +104,26 @@ export default function ReportsListPage() {
     setTemplateFilter("");
   }
 
+  function toggleAllVisible() {
+    setSelected((prev) => {
+      const allIds = filtered.map((r) => r.id);
+      const allSelectedHere = allIds.every((id) => prev.has(id));
+      if (allSelectedHere) return new Set();
+      return new Set(allIds);
+    });
+  }
+
   return (
     <div className="flex flex-col gap-6">
+      {canDelete && (
+        <BulkActionsBar
+          count={selected.size}
+          label="report"
+          onClear={clearSelection}
+          onDelete={bulkDelete}
+          busy={bulkBusy}
+        />
+      )}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-on-primary-fixed tracking-tight">Reports Ledger</h1>
@@ -134,6 +207,17 @@ export default function ReportsListPage() {
           <table className="w-full text-left border-collapse">
             <thead className="bg-primary-container text-on-primary">
               <tr>
+                {canDelete && (
+                  <th className="py-3 px-3 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      checked={filtered.length > 0 && filtered.every((r) => selected.has(r.id))}
+                      onChange={toggleAllVisible}
+                      aria-label="Select all visible"
+                      className="accent-on-primary cursor-pointer"
+                    />
+                  </th>
+                )}
                 <th className="py-3 px-5 text-xs font-semibold tracking-wider uppercase w-32">
                   Accession #
                 </th>
@@ -149,6 +233,9 @@ export default function ReportsListPage() {
                 <th className="py-3 px-5 text-xs font-semibold tracking-wider uppercase w-32">
                   Date
                 </th>
+                <th className="py-3 px-5 text-xs font-semibold tracking-wider uppercase text-right w-60">
+                  Payment
+                </th>
                 <th className="py-3 px-5 text-xs font-semibold tracking-wider uppercase text-right w-28">
                   Actions
                 </th>
@@ -157,21 +244,21 @@ export default function ReportsListPage() {
             <tbody className="text-sm">
               {isLoading && (
                 <tr>
-                  <td colSpan={6} className="py-10 px-5 text-center text-on-surface-variant">
+                  <td colSpan={canDelete ? 8 : 7} className="py-10 px-5 text-center text-on-surface-variant">
                     Loading reports…
                   </td>
                 </tr>
               )}
               {error && !isLoading && (
                 <tr>
-                  <td colSpan={6} className="py-10 px-5 text-center text-on-error-container">
+                  <td colSpan={canDelete ? 8 : 7} className="py-10 px-5 text-center text-on-error-container">
                     Failed to load reports.
                   </td>
                 </tr>
               )}
               {!isLoading && !error && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-16 px-5 text-center">
+                  <td colSpan={canDelete ? 8 : 7} className="py-16 px-5 text-center">
                     <Icon
                       name="description"
                       size={36}
@@ -196,8 +283,19 @@ export default function ReportsListPage() {
                   key={r.id}
                   className={`${
                     i % 2 === 0 ? "bg-surface" : "bg-surface-container-low"
-                  } hover:bg-surface-container-highest transition-colors group`}
+                  } ${selected.has(r.id) ? "ring-2 ring-inset ring-primary-container" : ""} hover:bg-surface-container-highest transition-colors group`}
                 >
+                  {canDelete && (
+                    <td className="py-2.5 px-3 text-center">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(r.id)}
+                        onChange={() => toggleOne(r.id)}
+                        aria-label={`Select ${r.accession_number}`}
+                        className="accent-primary-container cursor-pointer"
+                      />
+                    </td>
+                  )}
                   <td className="py-2.5 px-5 font-mono text-on-primary-fixed-variant font-medium">
                     <Link to={`/reports/${r.id}`} className="hover:underline">
                       {r.accession_number}
@@ -224,6 +322,15 @@ export default function ReportsListPage() {
                     })}
                   </td>
                   <td className="py-2.5 px-5 text-right">
+                    <PaymentCell
+                      report={r}
+                      onChanged={() => {
+                        queryClient.invalidateQueries({ queryKey: ["reports"] });
+                        queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+                      }}
+                    />
+                  </td>
+                  <td className="py-2.5 px-5 text-right">
                     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Link
                         to={`/reports/${r.id}`}
@@ -239,6 +346,15 @@ export default function ReportsListPage() {
                       >
                         <Icon name="download" size={18} />
                       </button>
+                      {canDelete && (
+                        <button
+                          onClick={() => handleDelete(r.id, r.accession_number)}
+                          className="p-1.5 text-error hover:bg-error-container rounded-md transition-colors"
+                          title="Delete report"
+                        >
+                          <Icon name="delete" size={18} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
