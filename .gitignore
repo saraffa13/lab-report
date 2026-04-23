@@ -69,3 +69,6 @@ celerybeat.pid
 
 # OS
 desktop.ini
+
+# Local dev-only browser extension
+dev-extension/

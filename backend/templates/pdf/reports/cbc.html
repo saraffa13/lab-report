@@ -12,34 +12,54 @@
   /* Tighter patient strip + letterhead spacing */
   .patient-strip { margin-top: 6px; }
   .ps-cell { padding: 6px 10px; }
-  .lh-address { padding: 3px 0 3px 54px; }
+
+  /* Letterhead — lab-name prominent, compact right column */
+  .lab-name { font-size: 20pt; letter-spacing: 0.5px; }
+  .lab-tagline { font-size: 8.5pt; margin-top: 2px; }
+  .logo-icon { width: 70px; padding-right: 10px; }
+  .logo-icon img { height: 50px; max-width: 70px; }
+  .lh-contact-cell { font-size: 8.5pt; }
+  .contact-row { margin-bottom: 2px; }
+  .lh-address-inline { font-size: 7.5pt; }
+
+  /* Compact patient strip */
+  .ps-left .pname { font-size: 10pt; }
+  .pleft-info .prow { font-size: 8pt; margin: 1px 0; }
+  .ps-mid .prow, .ps-right .prow { font-size: 7.5pt; margin: 2px 0; }
+  .ps-mid .pval, .ps-right .pval { font-size: 8pt; }
 
   /* Smaller section title with less vertical margin */
   .test-title-wrap { margin: 8px 0 4px 0; }
   .ttw-title { font-size: 11pt; }
 
-  /* Compact results table */
-  table.results thead th { padding: 4px 8px; font-size: 8.5pt; }
+  /* Results table — tuned to fit on one page without gap */
+  table.results thead th { padding: 3px 8px; font-size: 8pt; }
   table.results tbody td {
     padding: 2.5px 8px;
-    font-size: 8.5pt;
+    font-size: 8pt;
     vertical-align: middle;
-    line-height: 1.25;
+    line-height: 1.2;
   }
 
-  /* Italic gray sub-text (method / sample) — smaller for CBC */
+  /* Italic gray sub-text (method / sample) */
   .test-sub {
-    font-size: 6.5pt;
+    font-size: 6.2pt;
     margin-top: 0;
   }
+
+  .badge { font-size: 7pt; padding: 1px 7px; }
 
   .subsection-row td { font-size: 8pt; padding: 3px 8px !important; }
   .info-row td { font-size: 8pt; padding: 3px 8px !important; }
 
-  /* Tighter footer blocks */
-  .end-marker { margin: 6px 0 4px 0; font-size: 8.5pt; }
-  .signatures { margin-top: 4px; padding-top: 6px; }
-  .sig-img { height: 28px; }
-  .sig-stamp { width: 28px; height: 28px; }
-  .sig-stamp::before { font-size: 11pt; }
+  /* Footer blocks — slim signatures to keep CBC on one page */
+  .end-marker { margin: 2px 0 1px 0; font-size: 7pt; line-height: 1.1; }
+  .signatures { margin-top: 0; padding-top: 2px; }
+  .sig-cell { padding: 0 8px; line-height: 1.15; }
+  .sig-img { height: 14px; margin-bottom: 0; }
+  .sig-stamp { width: 14px; height: 14px; border-width: 1px; }
+  .sig-stamp::before { font-size: 6pt; }
+  .sig-thanks { font-size: 6pt; margin-bottom: 0; }
+  .sig-name { font-size: 6.5pt; margin-top: 0; line-height: 1.15; }
+  .sig-sub { font-size: 6pt; line-height: 1.15; }
 {% endblock %}

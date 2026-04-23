@@ -102,6 +102,12 @@
     padding: 6px 0 6px 54px;
     font-weight: 500;
   }
+  .lh-address-inline {
+    font-size: 8pt;
+    color: #4b5563;
+    font-weight: 500;
+    line-height: 1.35;
+  }
 
   .accent-strip {
     background: {{ lab.primary_color|default:"#1e3a8a" }};
@@ -467,6 +473,12 @@
     font-size: 7pt;
     letter-spacing: 0.3px;
   }
+  .iso-badge {
+    height: 34px;
+    width: auto;
+    vertical-align: middle;
+    margin-right: 4px;
+  }
 
   .bottom-bar {
     background: {{ lab.primary_color|default:"#1e3a8a" }};
@@ -513,7 +525,12 @@
       </span>
     </div>
     <div class="fi-mid">
-      <span class="accreditation">ISO 9001:2015</span><br>
+      {% if lab.settings.iso_badge_path %}
+        <img src="{{ lab.settings.iso_badge_path }}" class="iso-badge" alt="ISO">
+      {% else %}
+        <img src="static/branding/iso.png" class="iso-badge" alt="ISO">
+      {% endif %}
+      <span class="accreditation">{% if lab.settings.iso_reg_no %}{{ lab.settings.iso_reg_no }}{% else %}ISO 9001:2015{% endif %}</span><br>
       <span style="font-size:7pt;color:#6b7280;margin-top:3px;display:inline-block;">
         Generated on: {% now "d M, Y h:i A" %}
       </span>
@@ -556,13 +573,14 @@
     <td class="lh-contact-cell">
       {% if lab.phone %}<div class="contact-row"><span class="contact-ico">✆</span>{{ lab.phone }}</div>{% endif %}
       {% if lab.email %}<div class="contact-row"><span class="contact-ico">✉</span>{{ lab.email }}</div>{% endif %}
+      {% if lab.address or lab.city or lab.state or lab.pincode %}
+      <div class="contact-row lh-address-inline">
+        <span class="contact-ico">⌂</span>{% if lab.address %}{{ lab.address }}{% endif %}{% if lab.city %}, {{ lab.city }}{% endif %}{% if lab.state %}, {{ lab.state }}{% endif %}{% if lab.pincode %} - {{ lab.pincode }}{% endif %}
+      </div>
+      {% endif %}
     </td>
   </tr>
 </table>
-
-<div class="lh-address">
-  {% if lab.address %}{{ lab.address }}{% endif %}{% if lab.city %}, {{ lab.city }}{% endif %}{% if lab.state %}, {{ lab.state }}{% endif %}{% if lab.pincode %} - {{ lab.pincode }}{% endif %}
-</div>
 
 <div class="accent-strip">
   {% if lab.website %}{{ lab.website }}{% else %}www.{{ lab.name|slugify }}.com{% endif %}
