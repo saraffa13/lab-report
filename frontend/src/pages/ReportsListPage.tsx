@@ -77,11 +77,6 @@ export default function ReportsListPage() {
     return Array.from(set).sort();
   }, [data]);
 
-  const allVisibleSelected = useMemo(() => {
-    const visible = (data ?? []).filter((r) => selected.has(r.id));
-    return selected.size > 0 && visible.length === selected.size;
-  }, [data, selected]);
-
   const filtered = useMemo(() => {
     return (data ?? []).filter((r) => {
       if (status && r.status.toLowerCase() !== status) return false;
