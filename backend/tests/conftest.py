@@ -1,8 +1,6 @@
 """Pytest fixtures shared across backend tests."""
 from __future__ import annotations
 
-from decimal import Decimal
-
 import pytest
 from django.core.management import call_command
 

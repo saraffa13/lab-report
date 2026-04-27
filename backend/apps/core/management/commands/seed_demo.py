@@ -28,7 +28,6 @@ from apps.catalog.models import (
 )
 from apps.tenancy.models import Lab
 
-
 ROLES = [
     ("admin", "Admin"),
     ("lab_owner", "Lab owner"),

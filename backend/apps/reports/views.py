@@ -1,6 +1,8 @@
 """Report APIs."""
 from __future__ import annotations
 
+from contextlib import suppress
+
 from django.http import FileResponse, Http404
 from drf_spectacular.utils import extend_schema
 from rest_framework import filters, mixins, status, viewsets
@@ -94,11 +96,11 @@ class ReportViewSet(
     def pdf(self, request, pk=None):
         try:
             report = self.get_queryset().get(pk=pk)
-        except Report.DoesNotExist:
-            raise Http404
+        except Report.DoesNotExist as err:
+            raise Http404 from err
         path = ensure_report_pdf(report)
         response = FileResponse(
-            open(path, "rb"),
+            open(path, "rb"),  # noqa: SIM115
             content_type="application/pdf",
         )
         response["Content-Disposition"] = f'inline; filename="{report.accession_number}.pdf"'
@@ -109,13 +111,11 @@ class ReportViewSet(
     def regenerate_pdf(self, request, pk=None):
         try:
             report = self.get_queryset().get(pk=pk)
-        except Report.DoesNotExist:
-            raise Http404
+        except Report.DoesNotExist as err:
+            raise Http404 from err
         if report.pdf_file:
-            try:
+            with suppress(Exception):
                 report.pdf_file.delete(save=False)
-            except Exception:
-                pass
             report.pdf_file = None
             report.save(update_fields=["pdf_file"])
         ensure_report_pdf(report)
@@ -127,8 +127,8 @@ class ReportViewSet(
         from django.utils import timezone as tz
         try:
             report = self.get_queryset().get(pk=pk)
-        except Report.DoesNotExist:
-            raise Http404
+        except Report.DoesNotExist as err:
+            raise Http404 from err
         ser = PaymentUpdateSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         data = ser.validated_data
@@ -167,8 +167,8 @@ class ReportViewSet(
         from django.utils import timezone as tz
         try:
             original = self.get_queryset().get(pk=pk)
-        except Report.DoesNotExist:
-            raise Http404
+        except Report.DoesNotExist as err:
+            raise Http404 from err
         if original.status not in ("final", "delivered"):
             return Response({"detail": "Only finalized reports can be amended."}, status=status.HTTP_400_BAD_REQUEST)
 

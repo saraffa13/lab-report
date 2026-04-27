@@ -114,7 +114,7 @@ class Report(LabScopedModel):
     # Billing placeholders
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     discount_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS, null=True, blank=True)
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS, null=True, blank=True)  # noqa: DJ001
     paid_at = models.DateTimeField(null=True, blank=True, db_index=True)
 
     # Delivery placeholders
@@ -123,7 +123,7 @@ class Report(LabScopedModel):
     pdf_file = models.FileField(upload_to="reports/pdf/", null=True, blank=True)
     notes = models.TextField(blank=True)
     clinical_history = models.TextField(blank=True)
-    source = models.CharField(max_length=30, choices=SOURCE_CHOICES, null=True, blank=True)
+    source = models.CharField(max_length=30, choices=SOURCE_CHOICES, null=True, blank=True)  # noqa: DJ001
 
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,

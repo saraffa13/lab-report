@@ -13,7 +13,6 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
@@ -28,10 +27,10 @@ class SoftDeleteQuerySet(models.QuerySet):
     def hard_delete(self) -> tuple[int, dict[str, int]]:
         return super().delete()
 
-    def alive(self) -> "SoftDeleteQuerySet":
+    def alive(self) -> SoftDeleteQuerySet:
         return self.filter(deleted_at__isnull=True)
 
-    def dead(self) -> "SoftDeleteQuerySet":
+    def dead(self) -> SoftDeleteQuerySet:
         return self.filter(deleted_at__isnull=False)
 
 
@@ -78,7 +77,7 @@ class BaseModel(models.Model):
 
 
 class LabScopedQuerySet(SoftDeleteQuerySet):
-    def for_current_lab(self) -> "LabScopedQuerySet":
+    def for_current_lab(self) -> LabScopedQuerySet:
         lab_id = get_current_lab_id()
         if lab_id is None:
             # No lab in context (e.g. superadmin, management command).
@@ -87,7 +86,7 @@ class LabScopedQuerySet(SoftDeleteQuerySet):
             return self.none()
         return self.filter(lab_id=lab_id)
 
-    def all_labs(self) -> "LabScopedQuerySet":
+    def all_labs(self) -> LabScopedQuerySet:
         """Explicit bypass for cross-tenant queries (superadmin / reports)."""
         return self
 

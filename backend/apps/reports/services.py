@@ -8,7 +8,7 @@ integrations all share this same code path.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
@@ -85,9 +85,9 @@ def _pick_range(test: Test, patient: Patient) -> ReferenceRange | None:
         if best is None:
             best = rr
             continue
-        if rr.sex != "A" and best.sex == "A":
-            best = rr
-        elif rr.age_min_years is not None and best.age_min_years is None:
+        if (rr.sex != "A" and best.sex == "A") or (
+            rr.age_min_years is not None and best.age_min_years is None
+        ):
             best = rr
     return best
 

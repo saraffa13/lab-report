@@ -1,12 +1,16 @@
 """Catalog read-only APIs."""
 from __future__ import annotations
 
-from django.db.models import Q, Prefetch
+from django.db.models import Prefetch, Q
 from rest_framework import mixins, viewsets
 from rest_framework.permissions import IsAuthenticated
 
 from .models import ReportTemplate, Test
-from .serializers import ReportTemplateDetailSerializer, ReportTemplateListSerializer, TestSerializer
+from .serializers import (
+    ReportTemplateDetailSerializer,
+    ReportTemplateListSerializer,
+    TestSerializer,
+)
 
 
 def _visible_catalog(qs, lab_id):
