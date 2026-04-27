@@ -57,13 +57,16 @@ class RolePermission(models.Model):
     class Meta:
         unique_together = (("role", "permission"),)
 
+    def __str__(self) -> str:
+        return f"{self.role.code}:{self.permission.code}"
+
 
 class UserManager(BaseUserManager):
     """Email-based user manager (we don't use 'username')."""
 
     use_in_migrations = True
 
-    def _create_user(self, email: str, password: str | None, **extra_fields: Any) -> "User":
+    def _create_user(self, email: str, password: str | None, **extra_fields: Any) -> User:
         if not email:
             raise ValueError("Email is required")
         email = self.normalize_email(email)
@@ -72,12 +75,12 @@ class UserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-    def create_user(self, email: str, password: str | None = None, **extra_fields: Any) -> "User":
+    def create_user(self, email: str, password: str | None = None, **extra_fields: Any) -> User:
         extra_fields.setdefault("is_staff", False)
         extra_fields.setdefault("is_superuser", False)
         return self._create_user(email, password, **extra_fields)
 
-    def create_superuser(self, email: str, password: str | None = None, **extra_fields: Any) -> "User":
+    def create_superuser(self, email: str, password: str | None = None, **extra_fields: Any) -> User:
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
         if extra_fields.get("is_staff") is not True:
@@ -168,6 +171,10 @@ class UserPermission(models.Model):
 
     class Meta:
         unique_together = (("user", "permission"),)
+
+    def __str__(self) -> str:
+        state = "grant" if self.granted else "deny"
+        return f"{self.user_id}:{self.permission.code}:{state}"
 
 
 class OTPCode(BaseModel):

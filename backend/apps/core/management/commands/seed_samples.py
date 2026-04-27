@@ -23,7 +23,6 @@ from apps.patients.models import Patient
 from apps.reports.models import Report, ReportResult
 from apps.tenancy.models import Lab
 
-
 PATIENTS = [
     # (code, name, sex, age, phone, city, blood)
     ("P-0001", "Ramesh Kumar Singh",  "M", 52, "9507000001", "Ranchi",  "B+"),

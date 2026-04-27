@@ -3,9 +3,7 @@ from __future__ import annotations
 
 import logging
 
-from django.conf import settings
 from django.db import connection
-from django.http import JsonResponse
 from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny

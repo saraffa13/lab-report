@@ -3,12 +3,11 @@ from __future__ import annotations
 
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
-from django.template import Template, Context
+from django.template import Context, Template
 from django.views.decorators.cache import cache_control
 from django.views.decorators.http import require_GET
 
 from .models import Report
-
 
 _TEMPLATE = Template(
     """<!doctype html>

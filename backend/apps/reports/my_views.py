@@ -78,10 +78,10 @@ class MyReportPdfView(APIView):
     def get(self, request, pk):
         try:
             report = _patient_qs(request.user).get(pk=pk)
-        except Report.DoesNotExist:
-            raise Http404
+        except Report.DoesNotExist as err:
+            raise Http404 from err
         path = ensure_report_pdf(report)
-        response = FileResponse(open(path, "rb"), content_type="application/pdf")
+        response = FileResponse(open(path, "rb"), content_type="application/pdf")  # noqa: SIM115
         response["Content-Disposition"] = f'inline; filename="{report.accession_number}.pdf"'
         return response
 

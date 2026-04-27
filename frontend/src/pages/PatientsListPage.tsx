@@ -137,7 +137,7 @@ export default function PatientsListPage() {
                 )}
                 <th className="py-3.5 px-5 font-semibold">Patient Code</th>
                 <th className="py-3.5 px-5 font-semibold">Name</th>
-                <th className="py-3.5 px-5 font-semibold">Sex / Age</th>
+                <th className="py-3.5 px-5 font-semibold">Sex | Age</th>
                 <th className="py-3.5 px-5 font-semibold">Phone</th>
                 <th className="py-3.5 px-5 font-semibold">City</th>
                 <th className="py-3.5 px-5 font-semibold text-right">Reports</th>
@@ -213,7 +213,7 @@ export default function PatientsListPage() {
                     </td>
                     <td className="py-3 px-5 text-on-surface-variant">
                       {p.sex_display}
-                      {p.age ? ` / ${p.age}` : ""}
+                      {p.age ? ` | ${p.age}` : ""}
                     </td>
                     <td className="py-3 px-5 text-on-surface-variant font-mono text-xs">
                       {p.phone || "—"}

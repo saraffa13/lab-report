@@ -13,6 +13,7 @@ class RenderingConfig(AppConfig):
         @listen("report.finalized")
         def _on_report_finalized(report_id: str, **_kwargs):
             from apps.reports.models import Report
+
             from .services import ensure_report_pdf
 
             report = Report.all_objects.filter(id=report_id).first()

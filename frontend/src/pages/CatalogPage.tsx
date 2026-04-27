@@ -65,7 +65,7 @@ export default function CatalogPage() {
 
       <main className="flex flex-col lg:flex-row gap-6">
         {/* Left sidebar — template list */}
-        <aside className="w-full lg:w-80 shrink-0 bg-surface-container-low rounded-xl p-4 flex flex-col ring-1 ring-outline-variant/10 h-fit max-h-[calc(100vh-200px)]">
+        <aside className="w-full lg:w-96 xl:w-[26rem] shrink-0 bg-surface-container-low rounded-xl border border-outline-variant/25 p-4 flex flex-col ring-1 ring-outline-variant/15 h-fit max-h-[calc(100vh-200px)]">
           <div className="relative mb-3 group">
             <Icon
               name="filter_list"
