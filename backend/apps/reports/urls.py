@@ -10,7 +10,7 @@ from .my_views import (
     MyReportPdfView,
     MyReportsListView,
 )
-from .views import ReportViewSet
+from .views import ReportViewSet, SampleCollectorListView
 
 router = DefaultRouter()
 router.register(r"reports", ReportViewSet, basename="report")
@@ -18,6 +18,7 @@ router.register(r"referring-doctors", ReferringDoctorViewSet, basename="referrin
 
 urlpatterns = [
     path("dashboard/stats/", DashboardStatsView.as_view(), name="dashboard-stats"),
+    path("reports/sample-collectors/", SampleCollectorListView.as_view(), name="sample-collectors"),
     path("my-reports/", MyReportsListView.as_view(), name="my-reports-list"),
     path("my-reports/<uuid:pk>/", MyReportDetailView.as_view(), name="my-reports-detail"),
     path("my-reports/<uuid:pk>/pdf/", MyReportPdfView.as_view(), name="my-reports-pdf"),

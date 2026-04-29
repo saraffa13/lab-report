@@ -81,6 +81,10 @@ class Report(LabScopedModel):
     report_released_at = models.DateTimeField(null=True, blank=True)
     report_delivered_at = models.DateTimeField(null=True, blank=True)
 
+    # Free-text label printed on the report ("Deepak Kumar, DMLT, BMLT") — populated
+    # via autocomplete from past entries, independent of the staff user FK below.
+    sample_collected_by_name = models.CharField(max_length=200, blank=True, default="")
+
     # Actors — who did what (analytics + audit)
     collected_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,

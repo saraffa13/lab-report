@@ -145,6 +145,9 @@ class ReportService:
         results: list[ResultInput],
         referred_by_text: str = "Self",
         clinical_history: str = "",
+        sample_collected_by_name: str = "",
+        sample_collected_at: datetime | None = None,
+        report_released_at: datetime | None = None,
     ) -> Report:
         """
         Create (or reuse) a patient, create a report, attach results,
@@ -158,6 +161,8 @@ class ReportService:
         # Snapshot reference ranges per result
         accession = _next_accession_number(lab)
         now = timezone.now()
+        collected_at = sample_collected_at or now
+        released_at = report_released_at or now
 
         report = Report.objects.create(
             lab=lab,
@@ -169,13 +174,14 @@ class ReportService:
             report_template_id=template_id,
             status="final",
             billing_date=now,
-            sample_collected_at=now,
-            sample_received_at=now,
+            sample_collected_at=collected_at,
+            sample_received_at=collected_at,
             testing_started_at=now,
             testing_completed_at=now,
             verified_at=now,
-            signed_at=now,
-            report_released_at=now,
+            signed_at=released_at,
+            report_released_at=released_at,
+            sample_collected_by_name=sample_collected_by_name or "",
             created_by=user,
             collected_by=user,
             received_by=user,

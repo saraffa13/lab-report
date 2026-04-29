@@ -1,4 +1,4 @@
-{% load static %}<!doctype html>
+{% load static %}{% load phone_format %}<!doctype html>
 <html>
 <head>
 <meta charset="utf-8">
@@ -399,13 +399,14 @@
     vertical-align: bottom;
     padding: 0 10px;
   }
+  .signatures.sig-two .sig-cell { width: 50%; }
   .sig-thanks {
     font-size: 8pt;
     color: #6b7280;
     margin-bottom: 3px;
     font-style: italic;
   }
-  .sig-img { height: 36px; margin-bottom: 2px; }
+  .sig-img { height: 40px; max-width: 160px; margin-bottom: 2px; display: inline-block; object-fit: contain; }
   .sig-stamp-wrap {
     display: inline-block;
     vertical-align: middle;
@@ -520,6 +521,9 @@
   <div class="footer-info">
     <div class="fi-left">
       To Check Report Authenticity by Scanning QR Code on Top<br>
+      {% if lab.settings.registration_number %}
+        <span style="font-weight:700;color:#374151;">Registration Number:- {{ lab.settings.registration_number }}</span><br>
+      {% endif %}
       <span class="disclaimer">
         This is a computer-generated report. Results relate only to the sample tested and should be correlated clinically.
       </span>
@@ -544,7 +548,7 @@
   <div class="bottom-bar">
     <div class="bb-left">{% if lab.website %}{{ lab.website }}{% else %}www.{{ lab.name|slugify }}.com{% endif %}</div>
     <div class="bb-right">
-      {% if lab.phone %}<span>{{ lab.phone }}</span>&nbsp;&nbsp;&nbsp;{% endif %}
+      {% if lab.phone %}<span>{{ lab.phone|india_phone }}</span>&nbsp;&nbsp;&nbsp;{% endif %}
       <span class="bb-page"></span>
     </div>
   </div>
@@ -571,7 +575,7 @@
       </div>
     </td>
     <td class="lh-contact-cell">
-      {% if lab.phone %}<div class="contact-row"><span class="contact-ico">✆</span>{{ lab.phone }}</div>{% endif %}
+      {% if lab.phone %}<div class="contact-row"><span class="contact-ico">✆</span>{{ lab.phone|india_phone }}</div>{% endif %}
       {% if lab.email %}<div class="contact-row"><span class="contact-ico">✉</span>{{ lab.email }}</div>{% endif %}
       {% if lab.address or lab.city or lab.state or lab.pincode %}
       <div class="contact-row lh-address-inline">
@@ -600,7 +604,7 @@
         {% endif %}
         <div class="prow"><span class="plbl">UHID:</span> <span class="pval">{{ patient.patient_code }}</span></div>
         {% if patient.phone %}
-        <div class="prow"><span class="plbl">Phone:</span> <span class="pval">{{ patient.phone }}</span></div>
+        <div class="prow"><span class="plbl">Phone:</span> <span class="pval">{{ patient.phone|india_phone }}</span></div>
         {% endif %}
       </div>
       <div class="pleft-qr">
@@ -616,7 +620,7 @@
     </div>
     <div class="prow">
       <span class="plbl">Sample Collected By:</span>
-      <span class="pval">{{ report.collected_by|default:"—" }}</span>
+      <span class="pval">{% if report.sample_collected_by_name %}{{ report.sample_collected_by_name }}{% elif report.collected_by %}{{ report.collected_by.full_name|default:report.collected_by.email }}{% else %}—{% endif %}</span>
     </div>
     <div class="prow">
       <span class="plbl">Ref. By:</span>
@@ -636,7 +640,7 @@
     </div>
     <div class="prow">
       <span class="plbl">Reported on:</span>
-      <span class="pval">{{ report.signed_at|date:"h:i A d M Y" }}</span>
+      <span class="pval">{{ report.report_released_at|default:report.signed_at|date:"h:i A d M Y" }}</span>
     </div>
   </div>
 </div>
@@ -731,45 +735,32 @@
 
 <div class="end-marker">**** End of Report ****</div>
 
-{# ═══════════════════ SIGNATURES ═══════════════════ #}
-<div class="signatures">
-  {% if report.technician %}
+{# ═══════════════════ SIGNATURES (two-up: technologist | pathologist) ═══════════════════ #}
+<div class="signatures sig-two">
   <div class="sig-cell">
-    <div class="sig-thanks">Thanks for Reference</div>
-    {% if report.technician.signature_image %}
-      <img src="{{ report.technician.signature_image.path }}" class="sig-img" alt="signature">
+    {% if lab.settings.tech_signature_path %}
+      <img src="{{ lab.settings.tech_signature_path }}" class="sig-img" alt="signature">
+    {% else %}
+      <div class="sig-stamp-wrap"><span class="sig-stamp"></span></div>
     {% endif %}
-    <div class="sig-stamp-wrap"><span class="sig-stamp"></span></div>
-    <div class="sig-name">{{ report.technician.full_name|default:"Medical Lab Technician" }}</div>
-    <div class="sig-sub">{{ report.technician.qualification|default:"DMLT, BMLT" }}</div>
+    <div class="sig-name">{{ lab.settings.tech_name|default:"Deepak Kumar" }}</div>
+    <div class="sig-sub">{{ lab.settings.tech_qualification|default:"DMLT, BMLT" }}</div>
+    <div class="sig-sub">{{ lab.settings.tech_designation|default:"Lab.Technologist" }}</div>
   </div>
-  {% else %}
-  <div class="sig-cell">
-    <div class="sig-thanks">Thanks for Reference</div>
-    <div class="sig-stamp-wrap"><span class="sig-stamp"></span></div>
-    <div class="sig-name">Medical Lab Technician</div>
-    <div class="sig-sub">DMLT, BMLT</div>
-  </div>
-  {% endif %}
-
-  {% if report.verified_by %}
-  <div class="sig-cell">
-    {% if report.verified_by.signature_image %}
-      <img src="{{ report.verified_by.signature_image.path }}" class="sig-img" alt="signature">
-    {% endif %}
-    <div class="sig-stamp-wrap"><span class="sig-stamp"></span></div>
-    <div class="sig-name">Dr. {{ report.verified_by.full_name|default:report.verified_by.email }}</div>
-    <div class="sig-sub">{{ report.verified_by.qualification|default:"MD, Pathologist" }}</div>
-  </div>
-  {% endif %}
 
   <div class="sig-cell">
-    {% if signed_by and signed_by.signature_image %}
-      <img src="{{ signed_by.signature_image.path }}" class="sig-img" alt="signature">
+    {% if lab.settings.pathologist_signature_path %}
+      <img src="{{ lab.settings.pathologist_signature_path }}" class="sig-img" alt="signature">
+    {% else %}
+      <div class="sig-stamp-wrap"><span class="sig-stamp"></span></div>
     {% endif %}
-    <div class="sig-stamp-wrap"><span class="sig-stamp"></span></div>
-    <div class="sig-name">Dr. {{ signed_by.full_name|default:signed_by.email|default:"Consultant Pathologist" }}</div>
-    <div class="sig-sub">{{ signed_by.qualification|default:"MD, Pathologist" }}</div>
+    <div class="sig-name">Dr. {{ lab.settings.pathologist_name|default:"R.Kumar" }}</div>
+    <div class="sig-sub">{{ lab.settings.pathologist_qualification|default:"MBBS, MD(Pathology)" }}</div>
+    {% if lab.settings.pathologist_reg_no %}
+      <div class="sig-sub">Reg.No.{{ lab.settings.pathologist_reg_no }}</div>
+    {% else %}
+      <div class="sig-sub">Reg.No.3100</div>
+    {% endif %}
   </div>
 </div>
 

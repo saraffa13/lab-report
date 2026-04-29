@@ -47,6 +47,9 @@ export type CreateReportPayload = {
   results: Array<{ test_id: string; value: string }>;
   referred_by_text?: string;
   clinical_history?: string;
+  sample_collected_by_name?: string;
+  sample_collected_at?: string | null;
+  report_released_at?: string | null;
 };
 
 type Paginated<T> = { results: T[] } | T[];
@@ -109,6 +112,11 @@ export async function listReferringDoctors(search = ""): Promise<ReferringDoctor
 
 export async function createReferringDoctor(name: string): Promise<ReferringDoctor> {
   const { data } = await apiClient.post<ReferringDoctor>("/v1/referring-doctors/", { name });
+  return data;
+}
+
+export async function listSampleCollectors(): Promise<string[]> {
+  const { data } = await apiClient.get<string[]>("/v1/reports/sample-collectors/");
   return data;
 }
 

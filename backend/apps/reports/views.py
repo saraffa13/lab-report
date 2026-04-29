@@ -7,6 +7,7 @@ from rest_framework import filters, mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from apps.rendering.services import ensure_report_pdf
 
@@ -23,6 +24,25 @@ from .services import PatientInput, ReportService, ResultInput
 def _has_perm(user, code: str) -> bool:
     check = getattr(user, "has_permission_code", None)
     return bool(check and check(code))
+
+
+class SampleCollectorListView(APIView):
+    """Distinct, non-empty `sample_collected_by_name` values for the lab — used by autocomplete."""
+
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        lab_id = getattr(request.user, "lab_id", None)
+        qs = Report.all_objects.filter(deleted_at__isnull=True)
+        if lab_id is not None:
+            qs = qs.filter(lab_id=lab_id)
+        names = (
+            qs.exclude(sample_collected_by_name="")
+            .values_list("sample_collected_by_name", flat=True)
+            .distinct()
+            .order_by("sample_collected_by_name")
+        )
+        return Response(list(names))
 
 
 class ReportViewSet(
@@ -83,6 +103,9 @@ class ReportViewSet(
             results=results,
             referred_by_text=data.get("referred_by_text", "Self") or "Self",
             clinical_history=data.get("clinical_history", "") or "",
+            sample_collected_by_name=data.get("sample_collected_by_name", "") or "",
+            sample_collected_at=data.get("sample_collected_at"),
+            report_released_at=data.get("report_released_at"),
         )
         return Response(
             ReportDetailSerializer(report).data,

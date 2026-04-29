@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getTemplate, listTemplates, type Test } from "@/api/catalog";
 import { listPatients, type Patient } from "@/api/patients";
 import {
@@ -8,6 +8,7 @@ import {
   createReport,
   downloadPdf,
   listReferringDoctors,
+  listSampleCollectors,
   type ReferringDoctor,
 } from "@/api/reports";
 import { Icon } from "@/components/ui/Icon";
@@ -53,8 +54,15 @@ function iconForCode(code: string) {
   return TEMPLATE_ICON[code.toUpperCase()] ?? "science";
 }
 
+function localNowIso(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export default function CreateReportPage() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const [patient, setPatient] = useState<PatientForm>(EMPTY_PATIENT);
   const [referredBy, setReferredBy] = useState("Self");
   const [clinicalHistory, setClinicalHistory] = useState("");
@@ -63,11 +71,20 @@ export default function CreateReportPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [patientMode, setPatientMode] = useState<"new" | "existing">("new");
+  const [collectedBy, setCollectedBy] = useState("");
+  const [collectedOn, setCollectedOn] = useState<string>(() => localNowIso());
+  const [reportedOn, setReportedOn] = useState<string>(() => localNowIso());
 
   const { data: templates } = useQuery({ queryKey: ["templates"], queryFn: listTemplates });
   const { data: doctors } = useQuery({
     queryKey: ["referring-doctors"],
     queryFn: () => listReferringDoctors(),
+  });
+  const { data: collectors } = useQuery({
+    queryKey: ["sample-collectors"],
+    queryFn: listSampleCollectors,
+    refetchOnMount: "always",
+    staleTime: 0,
   });
   const { data: template } = useQuery({
     queryKey: ["template", templateId],
@@ -135,6 +152,9 @@ export default function CreateReportPage() {
         results: tests.map((t) => ({ test_id: t.id, value: results[t.id] })),
         referred_by_text: referredBy,
         clinical_history: clinicalHistory,
+        sample_collected_by_name: collectedBy.trim(),
+        sample_collected_at: collectedOn ? new Date(collectedOn).toISOString() : null,
+        report_released_at: reportedOn ? new Date(reportedOn).toISOString() : null,
       });
       const typed = referredBy.trim();
       if (
@@ -144,6 +164,7 @@ export default function CreateReportPage() {
       ) {
         try { await createReferringDoctor(typed); } catch { /* non-fatal */ }
       }
+      qc.invalidateQueries({ queryKey: ["sample-collectors"] });
       await downloadPdf(report.id, `${report.accession_number}.pdf`);
       navigate("/reports", { replace: true });
     } catch (err: unknown) {
@@ -276,6 +297,53 @@ export default function CreateReportPage() {
                   rows={1}
                   value={clinicalHistory}
                   onChange={(e) => setClinicalHistory(e.target.value)}
+                  className="bg-surface-container-highest border border-outline-variant/15 text-on-surface p-3 rounded-md focus:bg-surface-container-lowest focus:border-secondary focus:ring-1 focus:ring-secondary outline-none transition-all text-sm"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Sample tracking */}
+          <section className="mb-14">
+            <h3 className="text-2xl font-bold text-on-primary-fixed mb-5">Sample Tracking</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-5">
+              <div className="flex flex-col gap-2">
+                <label className="text-xs text-on-surface-variant font-medium uppercase tracking-wider">
+                  Sample Collected By
+                </label>
+                <input
+                  list="sample-collectors-list"
+                  value={collectedBy}
+                  onChange={(e) => setCollectedBy(e.target.value)}
+                  placeholder="e.g. Deepak Kumar, DMLT, BMLT"
+                  className="bg-surface-container-highest border border-outline-variant/15 text-on-surface p-3 rounded-md focus:bg-surface-container-lowest focus:border-secondary focus:ring-1 focus:ring-secondary outline-none transition-all text-sm"
+                  autoComplete="off"
+                />
+                <datalist id="sample-collectors-list">
+                  {(collectors ?? []).map((n) => (
+                    <option key={n} value={n} />
+                  ))}
+                </datalist>
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-xs text-on-surface-variant font-medium uppercase tracking-wider">
+                  Collected On
+                </label>
+                <input
+                  type="datetime-local"
+                  value={collectedOn}
+                  onChange={(e) => setCollectedOn(e.target.value)}
+                  className="bg-surface-container-highest border border-outline-variant/15 text-on-surface p-3 rounded-md focus:bg-surface-container-lowest focus:border-secondary focus:ring-1 focus:ring-secondary outline-none transition-all text-sm"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-xs text-on-surface-variant font-medium uppercase tracking-wider">
+                  Reported On
+                </label>
+                <input
+                  type="datetime-local"
+                  value={reportedOn}
+                  onChange={(e) => setReportedOn(e.target.value)}
                   className="bg-surface-container-highest border border-outline-variant/15 text-on-surface p-3 rounded-md focus:bg-surface-container-lowest focus:border-secondary focus:ring-1 focus:ring-secondary outline-none transition-all text-sm"
                 />
               </div>
