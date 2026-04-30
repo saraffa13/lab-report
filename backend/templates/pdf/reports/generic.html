@@ -546,7 +546,8 @@
   </div>
 
   <div class="bottom-bar">
-    <div class="bb-left">{% if lab.website %}{{ lab.website }}{% else %}www.{{ lab.name|slugify }}.com{% endif %}</div>
+    {% comment %} <div class="bb-left">{% if lab.website %}{{ lab.website }}{% else %}www.{{ lab.name|slugify }}.com{% endif %}</div> {% endcomment %}
+      {% if lab.email %}<div class="contact-row"><span class="contact-ico">✉</span>{{ lab.email }}</div>{% endif %}
     <div class="bb-right">
       {% if lab.phone %}<span>{{ lab.phone|india_phone }}</span>&nbsp;&nbsp;&nbsp;{% endif %}
       <span class="bb-page"></span>
@@ -576,8 +577,11 @@
     </td>
     <td class="lh-contact-cell">
       {% if lab.phone %}<div class="contact-row"><span class="contact-ico">✆</span>{{ lab.phone|india_phone }}</div>{% endif %}
-      {% if lab.email %}<div class="contact-row"><span class="contact-ico">✉</span>{{ lab.email }}</div>{% endif %}
+      {% comment %} {% if lab.email %}<div class="contact-row"><span class="contact-ico">✉</span>{{ lab.email }}</div>{% endif %} {% endcomment %}
       {% if lab.address or lab.city or lab.state or lab.pincode %}
+       {% if lab.settings.registration_number %}
+        <span style="font-weight:700;color:#374151;">Registration Number:- {{ lab.settings.registration_number }}</span><br>
+      {% endif %}
       <div class="contact-row lh-address-inline">
         <span class="contact-ico">⌂</span>{% if lab.address %}{{ lab.address }}{% endif %}{% if lab.city %}, {{ lab.city }}{% endif %}{% if lab.state %}, {{ lab.state }}{% endif %}{% if lab.pincode %} - {{ lab.pincode }}{% endif %}
       </div>
@@ -587,7 +591,8 @@
 </table>
 
 <div class="accent-strip">
-  {% if lab.website %}{{ lab.website }}{% else %}www.{{ lab.name|slugify }}.com{% endif %}
+      {% if lab.email %}<div class="contact-row"><span class="contact-ico">✉</span>{{ lab.email }}</div>{% endif %}
+  {% comment %} {% if lab.website %}{{ lab.website }}{% else %}www.{{ lab.name|slugify }}.com{% endif %} {% endcomment %}
 </div>
 
 {# ═══════════════════ PATIENT STRIP ═══════════════════ #}
