@@ -137,7 +137,8 @@ class UserViewSet(viewsets.ModelViewSet):
             )
         target.deleted_at = timezone.now()
         target.is_active = False
-        target.save(update_fields=["deleted_at", "is_active"])
+        target.email = f"deleted+{target.id}@invalid.local"
+        target.save(update_fields=["deleted_at", "is_active", "email"])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
