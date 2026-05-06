@@ -1,7 +1,13 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getTemplate, listTemplates, type Test } from "@/api/catalog";
+import {
+  getPackage,
+  getTemplate,
+  listPackages,
+  listTemplates,
+  type Test,
+} from "@/api/catalog";
 import { listPatients, type Patient } from "@/api/patients";
 import {
   createReferringDoctor,
@@ -67,6 +73,8 @@ export default function CreateReportPage() {
   const [referredBy, setReferredBy] = useState("Self");
   const [clinicalHistory, setClinicalHistory] = useState("");
   const [templateId, setTemplateId] = useState<string>("");
+  const [packageId, setPackageId] = useState<string>("");
+  const [packageTests, setPackageTests] = useState<Test[]>([]);
   const [results, setResults] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,6 +84,7 @@ export default function CreateReportPage() {
   const [reportedOn, setReportedOn] = useState<string>(() => localNowIso());
 
   const { data: templates } = useQuery({ queryKey: ["templates"], queryFn: listTemplates });
+  const { data: packages } = useQuery({ queryKey: ["packages"], queryFn: listPackages });
   const { data: doctors } = useQuery({
     queryKey: ["referring-doctors"],
     queryFn: () => listReferringDoctors(),
@@ -92,17 +101,47 @@ export default function CreateReportPage() {
     enabled: !!templateId,
   });
 
-  const tests: Test[] = useMemo(
-    () => (template ? template.template_tests.map((tt) => tt.test) : []),
-    [template],
-  );
+  const tests: Test[] = useMemo(() => {
+    if (packageId) return packageTests;
+    return template ? template.template_tests.map((tt) => tt.test) : [];
+  }, [packageId, packageTests, template]);
 
   useEffect(() => {
     setResults({});
-  }, [templateId]);
+  }, [templateId, packageId]);
+
+  // When a package is picked, fetch the full detail of each member template
+  // and union their tests (de-duped, preserving order).
+  useEffect(() => {
+    if (!packageId) {
+      setPackageTests([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const pkg = await getPackage(packageId);
+      const tplDetails = await Promise.all(
+        pkg.package_templates
+          .sort((a, b) => a.display_order - b.display_order)
+          .map((pt) => getTemplate(pt.template)),
+      );
+      if (cancelled) return;
+      const seen = new Set<string>();
+      const merged: Test[] = [];
+      for (const tpl of tplDetails) {
+        for (const tt of tpl.template_tests) {
+          if (seen.has(tt.test.id)) continue;
+          seen.add(tt.test.id);
+          merged.push(tt.test);
+        }
+      }
+      setPackageTests(merged);
+    })();
+    return () => { cancelled = true; };
+  }, [packageId]);
 
   const stepPatientDone = patient.name.trim().length > 0;
-  const stepTemplateDone = !!templateId;
+  const stepTemplateDone = !!(templateId || packageId);
   const stepResultsDone = tests.length > 0 && tests.every((t) => (results[t.id] ?? "").trim());
 
   function pickRange(t: Test): string {
@@ -132,7 +171,7 @@ export default function CreateReportPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!templateId) return setError("Pick a report template.");
+    if (!templateId && !packageId) return setError("Pick a template or a package.");
     const missing = tests.filter((t) => !results[t.id]?.trim());
     if (missing.length > 0)
       return setError(`Enter a value for: ${missing.map((t) => t.name).join(", ")}`);
@@ -148,7 +187,8 @@ export default function CreateReportPage() {
           city: patient.city,
           blood_group: patient.blood_group,
         },
-        template_id: templateId,
+        template_id: templateId || undefined,
+        package_id: packageId || undefined,
         results: tests.map((t) => ({ test_id: t.id, value: results[t.id] })),
         referred_by_text: referredBy,
         clinical_history: clinicalHistory,
@@ -353,6 +393,73 @@ export default function CreateReportPage() {
           {/* Step 2 */}
           <section className="mb-14">
             <h3 className="text-2xl font-bold text-on-primary-fixed mb-5">Diagnostic Panel</h3>
+
+            {/* Packages — auto-fill multiple templates at the offer price */}
+            {packages && packages.length > 0 && (
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold uppercase tracking-wider text-on-surface-variant">
+                    Health Packages
+                  </h4>
+                  {packageId && (
+                    <button
+                      type="button"
+                      onClick={() => setPackageId("")}
+                      className="text-xs text-on-surface-variant hover:text-on-primary-fixed underline"
+                    >
+                      Clear package
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {packages.map((p) => {
+                    const active = packageId === p.id;
+                    return (
+                      <button
+                        type="button"
+                        key={p.id}
+                        data-package-code={p.code}
+                        onClick={() => {
+                          setPackageId(p.id);
+                          setTemplateId("");
+                        }}
+                        className={
+                          active
+                            ? "bg-secondary-container text-on-secondary-container p-4 rounded-lg text-left shadow-md"
+                            : "bg-surface-container-low hover:bg-surface-container-highest transition-colors p-4 rounded-lg text-left"
+                        }
+                      >
+                        <div className="flex justify-between items-start mb-1">
+                          <Icon name="redeem" size={20} filled={active} />
+                          {active && <Icon name="check_circle" size={18} className="text-secondary-fixed" />}
+                        </div>
+                        <h4 className="font-bold text-sm leading-tight">{p.name}</h4>
+                        {p.name_alt && (
+                          <p className="text-[11px] opacity-80 mt-0.5">{p.name_alt}</p>
+                        )}
+                        <div className="flex items-baseline gap-2 mt-2">
+                          <span className="text-[11px] line-through text-on-surface-variant">
+                            ₹{Number(p.list_price).toFixed(0)}
+                          </span>
+                          <span className="text-base font-bold text-error">
+                            ₹{Number(p.offer_price).toFixed(0)}
+                          </span>
+                        </div>
+                        <p className="text-[10px] mt-1 opacity-80">{p.template_count} templates</p>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center my-5">
+                  <div className="flex-1 h-px bg-outline-variant/30" />
+                  <span className="px-3 text-xs uppercase tracking-wider text-on-surface-variant">
+                    or pick a single template
+                  </span>
+                  <div className="flex-1 h-px bg-outline-variant/30" />
+                </div>
+              </div>
+            )}
+
             {!templates ? (
               <div className="text-on-surface-variant text-sm">Loading templates…</div>
             ) : (
@@ -363,7 +470,11 @@ export default function CreateReportPage() {
                     <button
                       type="button"
                       key={t.id}
-                      onClick={() => setTemplateId(t.id)}
+                      data-template-code={t.code}
+                      onClick={() => {
+                        setTemplateId(t.id);
+                        setPackageId("");
+                      }}
                       className={
                         active
                           ? "bg-primary-container text-on-primary p-4 rounded-lg text-left shadow-md relative overflow-hidden"

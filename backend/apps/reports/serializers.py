@@ -30,6 +30,7 @@ class ResultInputSerializer(serializers.Serializer):
 class CreateReportSerializer(serializers.Serializer):
     patient = PatientInlineSerializer()
     template_id = serializers.UUIDField(required=False, allow_null=True)
+    package_id = serializers.UUIDField(required=False, allow_null=True)
     results = ResultInputSerializer(many=True)
     referred_by_text = serializers.CharField(default="Self", allow_blank=True, required=False)
     clinical_history = serializers.CharField(required=False, allow_blank=True, default="")

@@ -3,7 +3,15 @@ from __future__ import annotations
 from django.db import models
 from rest_framework import serializers
 
-from .models import ReferenceRange, ReportTemplate, ReportTemplateTest, Test, TestCategory
+from .models import (
+    Package,
+    PackageTemplate,
+    ReferenceRange,
+    ReportTemplate,
+    ReportTemplateTest,
+    Test,
+    TestCategory,
+)
 
 
 class ReferenceRangeSerializer(serializers.ModelSerializer):
@@ -269,3 +277,100 @@ class ReportTemplateWriteSerializer(serializers.ModelSerializer):
         ]
         if rows:
             ReportTemplateTest.objects.bulk_create(rows)
+
+
+class PackageTemplateSerializer(serializers.ModelSerializer):
+    template_code = serializers.CharField(source="template.code", read_only=True)
+    template_name = serializers.CharField(source="template.name", read_only=True)
+
+    class Meta:
+        model = PackageTemplate
+        fields = ("id", "template", "template_code", "template_name", "display_order")
+
+
+class PackageListSerializer(serializers.ModelSerializer):
+    template_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Package
+        fields = ("id", "code", "name", "name_alt", "description",
+                  "list_price", "offer_price", "is_active", "display_order",
+                  "template_count")
+
+    def get_template_count(self, obj):
+        return obj.package_templates.count()
+
+
+class PackageDetailSerializer(serializers.ModelSerializer):
+    package_templates = PackageTemplateSerializer(many=True, read_only=True)
+    is_system = serializers.SerializerMethodField()
+    is_editable = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Package
+        fields = ("id", "code", "name", "name_alt", "description",
+                  "list_price", "offer_price", "is_active", "display_order",
+                  "package_templates", "is_system", "is_editable")
+
+    def get_is_system(self, obj):
+        return obj.lab_id is None
+
+    def get_is_editable(self, obj):
+        request = self.context.get("request")
+        if request is None or not request.user.is_authenticated:
+            return False
+        u = request.user
+        if not (u.is_superuser or getattr(getattr(u, "role", None), "code", None) in ("admin", "lab_owner")):
+            return False
+        return obj.lab_id is None or obj.lab_id == getattr(u, "lab_id", None)
+
+
+class PackageWriteSerializer(serializers.ModelSerializer):
+    template_ids = serializers.ListField(
+        child=serializers.UUIDField(), write_only=True, allow_empty=True, required=False, default=list,
+    )
+
+    class Meta:
+        model = Package
+        fields = ("id", "code", "name", "name_alt", "description",
+                  "list_price", "offer_price", "is_active", "display_order",
+                  "template_ids")
+        read_only_fields = ("id",)
+
+    def validate_code(self, value):
+        value = (value or "").strip().upper()
+        if not value:
+            raise serializers.ValidationError("Code is required.")
+        if self.instance is not None:
+            scope_lab_id = self.instance.lab_id
+        else:
+            scope_lab_id = self.context["request"].user.lab_id
+        qs = Package.all_objects.filter(deleted_at__isnull=True, code__iexact=value, lab_id=scope_lab_id)
+        if self.instance is not None:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError("A package with this code already exists.")
+        return value
+
+    def create(self, validated_data):
+        template_ids = validated_data.pop("template_ids", [])
+        lab = self.context["request"].user.lab
+        pkg = Package.objects.create(lab=lab, **validated_data)
+        self._sync_templates(pkg, template_ids)
+        return pkg
+
+    def update(self, instance, validated_data):
+        template_ids = validated_data.pop("template_ids", None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        if template_ids is not None:
+            self._sync_templates(instance, template_ids)
+        return instance
+
+    def _sync_templates(self, pkg, template_ids):
+        PackageTemplate.all_objects.filter(package=pkg).hard_delete()
+        rows = [PackageTemplate(package=pkg, template_id=tid, display_order=i)
+                for i, tid in enumerate(template_ids)]
+        if rows:
+            PackageTemplate.objects.bulk_create(rows)

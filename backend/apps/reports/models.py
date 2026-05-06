@@ -69,6 +69,10 @@ class Report(LabScopedModel):
     report_template = models.ForeignKey(
         "catalog.ReportTemplate", on_delete=models.SET_NULL, null=True, blank=True, related_name="reports"
     )
+    package = models.ForeignKey(
+        "catalog.Package", on_delete=models.SET_NULL, null=True, blank=True, related_name="reports",
+        help_text="If set, the report bundles multiple templates from this package.",
+    )
 
     # Lifecycle timestamps — every transition captured for future analytics
     billing_date = models.DateTimeField(null=True, blank=True)

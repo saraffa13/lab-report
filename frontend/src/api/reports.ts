@@ -44,6 +44,7 @@ export type CreateReportPayload = {
     blood_group?: string;
   };
   template_id?: string | null;
+  package_id?: string | null;
   results: Array<{ test_id: string; value: string }>;
   referred_by_text?: string;
   clinical_history?: string;

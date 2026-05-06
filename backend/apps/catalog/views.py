@@ -9,8 +9,11 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import ReportTemplate, ReportTemplateTest, Test
+from .models import Package, PackageTemplate, ReportTemplate, ReportTemplateTest, Test
 from .serializers import (
+    PackageDetailSerializer,
+    PackageListSerializer,
+    PackageWriteSerializer,
     ReportTemplateDetailSerializer,
     ReportTemplateListSerializer,
     ReportTemplateWriteSerializer,
@@ -180,3 +183,47 @@ class ReportTemplateViewSet(viewsets.ModelViewSet):
             ])
         out = ReportTemplateDetailSerializer(tpl, context=self.get_serializer_context())
         return Response(out.data, status=status.HTTP_201_CREATED)
+
+
+class PackageViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticated,)
+    pagination_class = None
+
+    def get_serializer_class(self):
+        if self.action in ("create", "update", "partial_update"):
+            return PackageWriteSerializer
+        if self.action == "retrieve":
+            return PackageDetailSerializer
+        return PackageListSerializer
+
+    def get_queryset(self):
+        qs = Package.all_objects.filter(deleted_at__isnull=True)
+        qs = _visible_catalog(qs, getattr(self.request.user, "lab_id", None))
+        if self.action == "retrieve":
+            qs = qs.prefetch_related("package_templates__template")
+        return qs.order_by("display_order", "name")
+
+    def _assert_can_manage(self):
+        if not _can_manage_catalog(self.request.user):
+            raise PermissionDenied("Only lab admins can manage packages.")
+
+    def _assert_owns(self, instance: Package):
+        lab_id = getattr(self.request.user, "lab_id", None)
+        if instance.lab_id is not None and instance.lab_id != lab_id:
+            raise PermissionDenied("This package belongs to a different lab.")
+
+    def create(self, request, *args, **kwargs):
+        self._assert_can_manage()
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        self._assert_can_manage()
+        self._assert_owns(self.get_object())
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        self._assert_can_manage()
+        instance = self.get_object()
+        self._assert_owns(instance)
+        instance.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

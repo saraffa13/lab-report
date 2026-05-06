@@ -155,3 +155,43 @@ class ReportTemplateTest(BaseModel):
     class Meta:
         ordering = ("template", "display_order")
         unique_together = (("template", "test"),)
+
+
+class Package(BaseModel):
+    """A bundled offering of multiple ReportTemplates at a discounted price."""
+
+    lab = models.ForeignKey(
+        "tenancy.Lab", on_delete=models.CASCADE, null=True, blank=True, related_name="packages",
+        help_text="NULL = system default, available to all labs.",
+    )
+    code = models.CharField(max_length=50)
+    name = models.CharField(max_length=200)
+    name_alt = models.CharField(max_length=200, blank=True, help_text="Optional alternate / Hindi name.")
+    description = models.TextField(blank=True)
+
+    list_price = models.DecimalField(max_digits=10, decimal_places=2)
+    offer_price = models.DecimalField(max_digits=10, decimal_places=2)
+
+    is_active = models.BooleanField(default=True)
+    display_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ("display_order", "name")
+        constraints = [
+            models.UniqueConstraint(fields=("lab", "code"), name="unique_package_code_per_lab"),
+        ]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class PackageTemplate(BaseModel):
+    """Ordered ReportTemplates that make up a Package."""
+
+    package = models.ForeignKey(Package, on_delete=models.CASCADE, related_name="package_templates")
+    template = models.ForeignKey(ReportTemplate, on_delete=models.PROTECT, related_name="package_memberships")
+    display_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ("package", "display_order")
+        unique_together = (("package", "template"),)

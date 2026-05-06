@@ -100,6 +100,7 @@ class ReportViewSet(
             user=user,
             patient_input=patient_input,
             template_id=str(data["template_id"]) if data.get("template_id") else None,
+            package_id=str(data["package_id"]) if data.get("package_id") else None,
             results=results,
             referred_by_text=data.get("referred_by_text", "Self") or "Self",
             clinical_history=data.get("clinical_history", "") or "",

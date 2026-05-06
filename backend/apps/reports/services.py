@@ -148,6 +148,7 @@ class ReportService:
         sample_collected_by_name: str = "",
         sample_collected_at: datetime | None = None,
         report_released_at: datetime | None = None,
+        package_id: str | None = None,
     ) -> Report:
         """
         Create (or reuse) a patient, create a report, attach results,
@@ -172,6 +173,7 @@ class ReportService:
             referred_by_text=referred_by_text,
             clinical_history=clinical_history,
             report_template_id=template_id,
+            package_id=package_id,
             status="final",
             billing_date=now,
             sample_collected_at=collected_at,

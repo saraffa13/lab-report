@@ -165,3 +165,70 @@ export async function cloneTemplate(
   const { data } = await apiClient.post<TemplateDetail>(`/v1/catalog/templates/${id}/clone/`, body);
   return data;
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Packages (admin-only test bundles with discounted pricing)
+// ─────────────────────────────────────────────────────────────────────────
+
+export type PackageSummary = {
+  id: string;
+  code: string;
+  name: string;
+  name_alt: string;
+  description: string;
+  list_price: string;
+  offer_price: string;
+  is_active: boolean;
+  display_order: number;
+  template_count: number;
+};
+
+export type PackageMember = {
+  id: string;
+  template: string;
+  template_code: string;
+  template_name: string;
+  display_order: number;
+};
+
+export type PackageDetail = Omit<PackageSummary, "template_count"> & {
+  package_templates: PackageMember[];
+  is_system: boolean;
+  is_editable: boolean;
+};
+
+export type PackageWriteBody = {
+  code: string;
+  name: string;
+  name_alt?: string;
+  description?: string;
+  list_price: string | number;
+  offer_price: string | number;
+  is_active?: boolean;
+  display_order?: number;
+  template_ids: string[];
+};
+
+export async function listPackages(): Promise<PackageSummary[]> {
+  const { data } = await apiClient.get<Paginated<PackageSummary>>("/v1/catalog/packages/");
+  return unwrap(data);
+}
+
+export async function getPackage(id: string): Promise<PackageDetail> {
+  const { data } = await apiClient.get<PackageDetail>(`/v1/catalog/packages/${id}/`);
+  return data;
+}
+
+export async function createPackage(body: PackageWriteBody): Promise<PackageDetail> {
+  const { data } = await apiClient.post<PackageDetail>("/v1/catalog/packages/", body);
+  return data;
+}
+
+export async function updatePackage(id: string, body: Partial<PackageWriteBody>): Promise<PackageDetail> {
+  const { data } = await apiClient.patch<PackageDetail>(`/v1/catalog/packages/${id}/`, body);
+  return data;
+}
+
+export async function deletePackage(id: string): Promise<void> {
+  await apiClient.delete(`/v1/catalog/packages/${id}/`);
+}

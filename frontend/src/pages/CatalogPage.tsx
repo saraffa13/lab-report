@@ -4,6 +4,7 @@ import {
   cloneTemplate,
   createTemplate,
   createTest,
+  deletePackage,
   deleteTemplate,
   deleteTest,
   getTemplate,
@@ -12,11 +13,13 @@ import {
   listTests,
   updateTemplate,
   updateTest,
+  type PackageSummary,
   type Test,
   type TemplateDetail,
   type TestWriteBody,
   type TestWriteRange,
 } from "@/api/catalog";
+import { PackagesView } from "./_packages_view";
 import { cachedUser } from "@/api/auth";
 import { Icon } from "@/components/ui/Icon";
 
@@ -57,7 +60,7 @@ export default function CatalogPage() {
   const canManage = !!user && (user.is_superuser || user.role_code === "admin" || user.role_code === "lab_owner");
 
   const { data: templates } = useQuery({ queryKey: ["templates"], queryFn: listTemplates });
-  const [tab, setTab] = useState<"templates" | "tests">("templates");
+  const [tab, setTab] = useState<"templates" | "tests" | "packages">("templates");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [allTestsSearch, setAllTestsSearch] = useState("");
@@ -66,6 +69,7 @@ export default function CatalogPage() {
   const [testEditor, setTestEditor] = useState<TestEditorMode | null>(null);
   const [confirmDeleteTest, setConfirmDeleteTest] = useState<Test | null>(null);
   const [deleteTestError, setDeleteTestError] = useState<string | null>(null);
+  const [confirmDeletePackage, setConfirmDeletePackage] = useState<PackageSummary | null>(null);
 
   const { data: detail } = useQuery({
     queryKey: ["template-detail", selectedId],
@@ -98,6 +102,14 @@ export default function CatalogPage() {
       queryClient.invalidateQueries({ queryKey: ["templates"] });
       setConfirmDelete(null);
       setSelectedId(null);
+    },
+  });
+
+  const deletePackageMutation = useMutation({
+    mutationFn: (id: string) => deletePackage(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["packages"] });
+      setConfirmDeletePackage(null);
     },
   });
 
@@ -142,6 +154,16 @@ export default function CatalogPage() {
             >
               All Tests
             </button>
+            <button
+              onClick={() => setTab("packages")}
+              className={
+                tab === "packages"
+                  ? "px-5 py-2 rounded-lg bg-surface-container-lowest text-primary-container font-semibold text-sm shadow-sm transition-all"
+                  : "px-5 py-2 rounded-lg text-on-surface-variant/80 font-medium text-sm hover:text-on-primary-fixed transition-all"
+              }
+            >
+              Packages
+            </button>
           </div>
         </div>
         {canManage && (
@@ -163,6 +185,10 @@ export default function CatalogPage() {
           </div>
         )}
       </div>
+
+      {tab === "packages" && (
+        <PackagesView canManage={canManage} onConfirmDelete={(p) => setConfirmDeletePackage(p)} />
+      )}
 
       {tab === "tests" && (
         <AllTestsView
@@ -416,6 +442,18 @@ export default function CatalogPage() {
             queryClient.invalidateQueries({ queryKey: ["catalog-tests"] });
             if (selectedId) queryClient.invalidateQueries({ queryKey: ["template-detail", selectedId] });
           }}
+        />
+      )}
+
+      {confirmDeletePackage && (
+        <ConfirmDialog
+          title="Delete package?"
+          message={`"${confirmDeletePackage.name}" will be removed.`}
+          confirmLabel="Delete"
+          confirmVariant="danger"
+          loading={deletePackageMutation.isPending}
+          onCancel={() => setConfirmDeletePackage(null)}
+          onConfirm={() => deletePackageMutation.mutate(confirmDeletePackage.id)}
         />
       )}
 
