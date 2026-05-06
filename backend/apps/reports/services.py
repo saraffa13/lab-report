@@ -230,13 +230,33 @@ class ReportService:
     @staticmethod
     def _upsert_patient(*, lab: Lab, user, data: PatientInput) -> Patient:
         """
-        Find an existing patient by (lab, phone) if phone is given; else create new.
-        Patient code is auto-generated.
+        Phone is the patient identity within a lab. If a live patient already has
+        the supplied phone, refresh demographics on it and return; never INSERT a
+        duplicate (which would hit the unique_phone_per_lab constraint).
         """
+        from rest_framework.exceptions import ValidationError
+
         if data.phone:
-            existing = Patient.all_objects.filter(lab=lab, phone=data.phone, deleted_at__isnull=True).first()
-            if existing and existing.name.strip().lower() == (data.name or "").strip().lower():
-                # Same person re-using the lab: refresh demographics from latest input.
+            existing = (
+                Patient.all_objects
+                .filter(lab=lab, phone=data.phone, deleted_at__isnull=True)
+                .first()
+            )
+            if existing is not None:
+                incoming = (data.name or "").strip()
+                stored = (existing.name or "").strip()
+                # If the caller passed a different name, surface a clean 400 instead of
+                # silently overwriting someone else's record.
+                if incoming and stored and incoming.lower() != stored.lower():
+                    raise ValidationError({
+                        "phone": [
+                            f"Phone {data.phone} is already registered for "
+                            f"\"{stored}\". Use a different phone or update that patient."
+                        ]
+                    })
+                # Same patient (or one without a stored name yet) — refresh fields.
+                if incoming and not stored:
+                    existing.name = incoming
                 for field in ("sex", "age", "age_unit", "email", "address", "city", "blood_group"):
                     val = getattr(data, field, None)
                     if val not in (None, ""):
