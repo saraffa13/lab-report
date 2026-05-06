@@ -17,6 +17,7 @@ from .serializers import (
     PaymentUpdateSerializer,
     ReportDetailSerializer,
     ReportListSerializer,
+    friendly_pdf_filename,
 )
 from .services import PatientInput, ReportService, ResultInput
 
@@ -125,7 +126,7 @@ class ReportViewSet(
             open(path, "rb"),
             content_type="application/pdf",
         )
-        response["Content-Disposition"] = f'inline; filename="{report.accession_number}.pdf"'
+        response["Content-Disposition"] = f'inline; filename="{friendly_pdf_filename(report)}"'
         return response
 
     @extend_schema(tags=["reports"], summary="Regenerate the PDF (clears cache)")

@@ -5,18 +5,21 @@ export type ReportListItem = {
   accession_number: string;
   patient_name: string;
   template_name: string | null;
+  package_name: string | null;
   status: string;
   signed_at: string | null;
   created_at: string;
   total_amount: string | null;
   payment_status: "paid" | "partial" | "pending" | null;
   paid_at: string | null;
+  suggested_filename: string;
 };
 
 export type ReportDetail = ReportListItem & {
   barcode_number: string;
   patient: string;
   report_template: string | null;
+  package: string | null;
   referred_by_text: string;
   clinical_history: string;
   results: Array<{

@@ -1,8 +1,29 @@
 from __future__ import annotations
 
+import re
+
 from rest_framework import serializers
 
 from .models import Report, ReportResult
+
+
+def friendly_pdf_filename(report: Report) -> str:
+    """`{Patient}_{Package or Template}.pdf` — filesystem-safe, falls back to accession."""
+    patient = (getattr(report.patient, "name", "") or "").strip()
+    if report.package_id:
+        label = (getattr(report.package, "name", "") or "").strip()
+    elif report.report_template_id:
+        label = (getattr(report.report_template, "name", "") or "").strip()
+    else:
+        label = "Report"
+    parts = [p for p in (patient, label) if p]
+    raw = "_".join(parts) if parts else (report.accession_number or "report")
+    # Strip filesystem-unsafe chars and collapse whitespace.
+    safe = re.sub(r'[\\/:*?"<>|\r\n\t]+', "", raw)
+    safe = re.sub(r"\s+", "_", safe).strip("._")
+    if not safe:
+        safe = report.accession_number or "report"
+    return f"{safe}.pdf"
 
 
 class PatientInlineSerializer(serializers.Serializer):
@@ -55,19 +76,27 @@ class ReportResultSerializer(serializers.ModelSerializer):
 class ReportListSerializer(serializers.ModelSerializer):
     patient_name = serializers.CharField(source="patient.name", read_only=True)
     template_name = serializers.CharField(source="report_template.name", read_only=True, default=None)
+    package_name = serializers.CharField(source="package.name", read_only=True, default=None)
+    suggested_filename = serializers.SerializerMethodField()
 
     class Meta:
         model = Report
         fields = (
-            "id", "accession_number", "patient_name", "template_name",
+            "id", "accession_number", "patient_name", "template_name", "package_name",
             "status", "signed_at", "created_at",
             "total_amount", "payment_status", "paid_at",
+            "suggested_filename",
         )
+
+    def get_suggested_filename(self, obj: Report) -> str:
+        return friendly_pdf_filename(obj)
 
 
 class ReportDetailSerializer(serializers.ModelSerializer):
     patient_name = serializers.CharField(source="patient.name", read_only=True)
     template_name = serializers.CharField(source="report_template.name", read_only=True, default=None)
+    package_name = serializers.CharField(source="package.name", read_only=True, default=None)
+    suggested_filename = serializers.SerializerMethodField()
     results = ReportResultSerializer(many=True, read_only=True)
 
     class Meta:
@@ -75,12 +104,17 @@ class ReportDetailSerializer(serializers.ModelSerializer):
         fields = (
             "id", "accession_number", "barcode_number",
             "patient", "patient_name", "report_template", "template_name",
+            "package", "package_name",
             "referred_by_text", "clinical_history",
             "sample_collected_by_name", "sample_collected_at", "report_released_at",
             "status", "signed_at", "created_at",
             "total_amount", "payment_status", "paid_at",
             "results",
+            "suggested_filename",
         )
+
+    def get_suggested_filename(self, obj: Report) -> str:
+        return friendly_pdf_filename(obj)
 
 
 class PaymentUpdateSerializer(serializers.Serializer):

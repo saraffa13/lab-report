@@ -142,7 +142,7 @@ export default function ReportDetailPage() {
             Back
           </Link>
           <button
-            onClick={() => downloadPdf(report.id, `${report.accession_number}.pdf`)}
+            onClick={() => downloadPdf(report.id, report.suggested_filename)}
             className="bg-gradient-to-b from-primary-container to-primary text-on-primary font-medium text-sm px-5 py-2 rounded-md hover:opacity-95 transition-opacity flex items-center gap-2 shadow-[0_4px_12px_rgba(11,42,91,0.2)]"
           >
             <Icon name="download" size={16} />
@@ -359,7 +359,7 @@ export default function ReportDetailPage() {
                 )}
                 <button
                   onClick={() =>
-                    downloadPdf(report.id, `${report.accession_number}.pdf`)
+                    downloadPdf(report.id, report.suggested_filename)
                   }
                   className="p-1.5 text-on-surface-variant hover:bg-surface-container-highest rounded transition-colors"
                   title="Download"

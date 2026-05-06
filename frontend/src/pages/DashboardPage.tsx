@@ -283,7 +283,7 @@ export default function DashboardPage() {
                       </td>
                       <td className="px-4 py-2.5 text-right">
                         <button
-                          onClick={() => downloadPdf(r.id, `${r.accession_number}.pdf`)}
+                          onClick={() => downloadPdf(r.id, r.suggested_filename)}
                           className="text-primary-container font-medium hover:text-secondary transition-colors text-sm"
                         >
                           View PDF

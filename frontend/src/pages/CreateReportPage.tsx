@@ -205,7 +205,7 @@ export default function CreateReportPage() {
         try { await createReferringDoctor(typed); } catch { /* non-fatal */ }
       }
       qc.invalidateQueries({ queryKey: ["sample-collectors"] });
-      await downloadPdf(report.id, `${report.accession_number}.pdf`);
+      await downloadPdf(report.id, report.suggested_filename);
       navigate("/reports", { replace: true });
     } catch (err: unknown) {
       const e = err as { response?: { data?: { detail?: string } } };

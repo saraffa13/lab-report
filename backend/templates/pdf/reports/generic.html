@@ -415,6 +415,7 @@
     font-style: italic;
   }
   .sig-img { height: 26px; max-width: 110px; margin-bottom: 0; display: inline-block; object-fit: contain; }
+  .sig-img-spacer { height: 26px; }   /* keeps name aligned with adjacent signed cells */
   .end-marker {
     margin: 10px auto 6px auto;
     font-size: 8pt;
@@ -560,11 +561,7 @@
     </div>
 
     <div class="sig-cell">
-      {% if lab.settings.tech2_signature_path %}
-        <img src="{{ lab.settings.tech2_signature_path }}" class="sig-img" alt="signature">
-      {% else %}
-        <div class="sig-stamp-wrap"><span class="sig-stamp"></span></div>
-      {% endif %}
+      <div class="sig-img-spacer"></div>
       <div class="sig-name">{{ lab.settings.tech2_name|default:"Sudhanshu Suman" }}</div>
       <div class="sig-sub">{{ lab.settings.tech2_qualification|default:"BMLT" }}, {{ lab.settings.tech2_designation|default:"Lab.Technologist" }}</div>
       <div class="sig-sub">Reg.No.{{ lab.settings.tech2_reg_no|default:"12559" }}</div>
@@ -593,7 +590,7 @@
         <span style="font-weight:700;color:#374151;">Registration Number:- {{ lab.settings.registration_number }}</span><br>
       {% endif %}
       <span class="disclaimer">
-        This is a computer-generated report. Results relate only to the sample tested and should be correlated clinically.
+        Test reports are not valid for medico-legal purposes. All reports are to be correlated clinically; if the results of the test are alarming, unexpected, or not consistent with the clinical picture, the patient or the referring doctor may please contact the laboratory immediately for re-check.
       </span>
     </div>
     <div class="fi-mid">

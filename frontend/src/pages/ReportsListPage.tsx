@@ -335,7 +335,7 @@ export default function ReportsListPage() {
                         <Icon name="visibility" size={18} />
                       </Link>
                       <button
-                        onClick={() => downloadPdf(r.id, `${r.accession_number}.pdf`)}
+                        onClick={() => downloadPdf(r.id, r.suggested_filename)}
                         className="p-1.5 text-primary-container hover:bg-surface-container-high rounded-md transition-colors"
                         title="Download PDF"
                       >
