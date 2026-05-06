@@ -1,5 +1,20 @@
 import { apiClient } from "./client";
 
+export type ReferenceRange = {
+  id: string;
+  sex: "M" | "F" | "A";
+  age_min_years: number | null;
+  age_max_years: number | null;
+  range_min: string | null;
+  range_max: string | null;
+  range_text: string;
+  critical_low: string | null;
+  critical_high: string | null;
+  unit_override: string;
+  note: string;
+  display: string;
+};
+
 export type Test = {
   id: string;
   code: string;
@@ -10,11 +25,40 @@ export type Test = {
   sample_type: string;
   method: string;
   unit: string;
-  reference_ranges: Array<{
-    id: string;
-    sex: "M" | "F" | "A";
-    display: string;
-  }>;
+  decimal_places?: number;
+  clinical_significance?: string;
+  display_order?: number;
+  is_system?: boolean;
+  is_editable?: boolean;
+  reference_ranges: ReferenceRange[];
+};
+
+export type TestWriteRange = {
+  sex: "M" | "F" | "A";
+  age_min_years?: number | null;
+  age_max_years?: number | null;
+  range_min?: string | number | null;
+  range_max?: string | number | null;
+  range_text?: string;
+  critical_low?: string | number | null;
+  critical_high?: string | number | null;
+  unit_override?: string;
+  note?: string;
+};
+
+export type TestWriteBody = {
+  code: string;
+  name: string;
+  short_name?: string;
+  category: string;
+  sample_type?: string;
+  method?: string;
+  unit?: string;
+  decimal_places?: number;
+  clinical_significance?: string;
+  display_order?: number;
+  is_active?: boolean;
+  reference_ranges?: TestWriteRange[];
 };
 
 export type TemplateSummary = {
@@ -32,6 +76,15 @@ export type TemplateDetail = TemplateSummary & {
     is_required: boolean;
     test: Test;
   }>;
+  is_system: boolean;
+  is_editable: boolean;
+};
+
+export type TemplateWriteBody = {
+  name: string;
+  code: string;
+  description?: string;
+  test_ids: string[];
 };
 
 type Paginated<T> = { results: T[] } | T[];
@@ -47,5 +100,68 @@ export async function listTemplates(): Promise<TemplateSummary[]> {
 
 export async function getTemplate(id: string): Promise<TemplateDetail> {
   const { data } = await apiClient.get<TemplateDetail>(`/v1/catalog/templates/${id}/`);
+  return data;
+}
+
+export async function listTests(): Promise<Test[]> {
+  const { data } = await apiClient.get<Paginated<Test>>("/v1/catalog/tests/");
+  return unwrap(data);
+}
+
+export async function getTest(id: string): Promise<Test> {
+  const { data } = await apiClient.get<Test>(`/v1/catalog/tests/${id}/`);
+  return data;
+}
+
+export async function createTest(body: TestWriteBody): Promise<Test> {
+  const { data } = await apiClient.post<Test>("/v1/catalog/tests/", body);
+  return data;
+}
+
+export async function updateTest(id: string, body: Partial<TestWriteBody>): Promise<Test> {
+  const { data } = await apiClient.patch<Test>(`/v1/catalog/tests/${id}/`, body);
+  return data;
+}
+
+export async function deleteTest(id: string): Promise<void> {
+  await apiClient.delete(`/v1/catalog/tests/${id}/`);
+}
+
+export type TestCategoryOption = { id: string; code: string; name: string };
+
+export async function listCategories(): Promise<TestCategoryOption[]> {
+  // Derive distinct categories from the tests endpoint until a dedicated route exists.
+  const tests = await listTests();
+  const map = new Map<string, TestCategoryOption>();
+  for (const t of tests) {
+    if (!map.has(t.category)) {
+      map.set(t.category, { id: t.category, code: "", name: t.category_name });
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export async function createTemplate(body: TemplateWriteBody): Promise<TemplateDetail> {
+  const { data } = await apiClient.post<TemplateDetail>("/v1/catalog/templates/", body);
+  return data;
+}
+
+export async function updateTemplate(
+  id: string,
+  body: Partial<TemplateWriteBody>,
+): Promise<TemplateDetail> {
+  const { data } = await apiClient.patch<TemplateDetail>(`/v1/catalog/templates/${id}/`, body);
+  return data;
+}
+
+export async function deleteTemplate(id: string): Promise<void> {
+  await apiClient.delete(`/v1/catalog/templates/${id}/`);
+}
+
+export async function cloneTemplate(
+  id: string,
+  body: { name?: string; code?: string } = {},
+): Promise<TemplateDetail> {
+  const { data } = await apiClient.post<TemplateDetail>(`/v1/catalog/templates/${id}/clone/`, body);
   return data;
 }

@@ -2,26 +2,25 @@ from __future__ import annotations
 
 from django.db import migrations
 
-DEFAULTS = {
+OVERRIDES = {
     "tech_signature_path": "static/branding/damundarMahto.png",
-    "pathologist_signature_path": "static/branding/rkumar.png",
-    "registration_number": "2036500318",
     "tech_name": "Damundar Mahto",
     "tech_qualification": "CMLT",
     "tech_designation": "Lab.Technologist",
-    "pathologist_name": "R.Kumar",
-    "pathologist_qualification": "MBBS, MD(Pathology)",
-    "pathologist_reg_no": "3100",
+    "tech2_signature_path": "static/branding/sudhanshuSuman.png",
+    "tech2_name": "Sudhanshu Suman",
+    "tech2_qualification": "BMLT",
+    "tech2_designation": "Lab.Technologist",
 }
 
 
-def set_defaults(apps, schema_editor):
+def update_tech_signer(apps, schema_editor):
     Lab = apps.get_model("tenancy", "Lab")
     for lab in Lab.objects.all():
         settings = dict(lab.settings or {})
         changed = False
-        for key, value in DEFAULTS.items():
-            if not settings.get(key):
+        for key, value in OVERRIDES.items():
+            if settings.get(key) != value:
                 settings[key] = value
                 changed = True
         if changed:
@@ -31,9 +30,9 @@ def set_defaults(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("tenancy", "0002_alter_lab_phone_alter_labbranch_phone"),
+        ("tenancy", "0003_set_lab_branding_defaults"),
     ]
 
     operations = [
-        migrations.RunPython(set_defaults, migrations.RunPython.noop),
+        migrations.RunPython(update_tech_signer, migrations.RunPython.noop),
     ]

@@ -315,7 +315,7 @@ export default function CreateReportPage() {
                   list="sample-collectors-list"
                   value={collectedBy}
                   onChange={(e) => setCollectedBy(e.target.value)}
-                  placeholder="e.g. Deepak Kumar, DMLT, BMLT"
+                  placeholder="e.g. Damundar Mahto, CMLT"
                   className="bg-surface-container-highest border border-outline-variant/15 text-on-surface p-3 rounded-md focus:bg-surface-container-lowest focus:border-secondary focus:ring-1 focus:ring-secondary outline-none transition-all text-sm"
                   autoComplete="off"
                 />

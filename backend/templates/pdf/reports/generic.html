@@ -6,8 +6,11 @@
 <style>
   @page {
     size: A4;
-    margin: 10mm 9mm 44mm 9mm;   /* bottom reserved for running footer */
-    @bottom-center { content: element(page-footer); }
+    margin: 7mm 9mm 64mm 9mm;   /* bottom hosts signatures + running footer */
+    @bottom-center {
+      content: element(page-footer);
+      vertical-align: bottom;   /* push the block toward the page edge */
+    }
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -41,6 +44,7 @@
   }
 
   .content { position: relative; z-index: 1; }
+  .signatures { break-inside: avoid; page-break-inside: avoid; }
 
   /* ═══════════════════════════════════════════════
      LETTERHEAD
@@ -206,7 +210,7 @@
      TEST TITLE (centered with side rules)
      ═══════════════════════════════════════════════ */
   .test-title-wrap {
-    margin: 18px 0 8px 0;
+    margin: 26px 0 10px 0;
     display: table;
     width: 100%;
     table-layout: fixed;
@@ -250,11 +254,16 @@
     font-weight: 700;
   }
   table.results tbody td {
-    padding: 7px 8px;
-    font-size: 9pt;
-    vertical-align: top;
+    padding: 2.5px 8px;
+    font-size: 8pt;
+    vertical-align: middle;
     border-bottom: 1px solid #f3f4f6;
+    line-height: 1.2;
   }
+  table.results thead th { padding: 3px 8px; font-size: 8pt; }
+  .subsection-row td { font-size: 8pt; padding: 3px 8px !important; }
+  .info-row td { font-size: 8pt; padding: 3px 8px !important; }
+  .badge { font-size: 7pt; padding: 1px 7px; }
   table.results td.col-test { width: 32%; }
   table.results td.col-result { width: 14%; font-weight: 700; color: #1f2937; }
   table.results td.col-status { width: 19%; }
@@ -388,8 +397,7 @@
     display: table;
     width: 100%;
     margin-top: 8px;
-    padding-top: 10px;
-    border-top: 1px solid #e5e7eb;
+    padding: 6px 4px 8px 4px;
     table-layout: fixed;
   }
   .sig-cell {
@@ -406,7 +414,12 @@
     margin-bottom: 3px;
     font-style: italic;
   }
-  .sig-img { height: 40px; max-width: 160px; margin-bottom: 2px; display: inline-block; object-fit: contain; }
+  .sig-img { height: 26px; max-width: 110px; margin-bottom: 0; display: inline-block; object-fit: contain; }
+  .end-marker { margin: 6px 0 4px 0; font-size: 7pt; line-height: 1.1; padding: 2px 0; page-break-before: avoid; break-before: avoid; }
+  .signatures { margin-top: 0; padding-top: 2px; }
+  .sig-cell { padding: 0 8px; line-height: 1.15; }
+  .sig-name { font-size: 6.5pt; margin-top: 0; line-height: 1.15; }
+  .sig-sub { font-size: 6pt; line-height: 1.15; }
   .sig-stamp-wrap {
     display: inline-block;
     vertical-align: middle;
@@ -450,6 +463,7 @@
     width: 100%;
     font-size: 7.5pt;
     color: #6b7280;
+    padding-bottom: 6mm;   /* breathing room above the physical page edge */
   }
   .footer-info {
     display: table;
@@ -516,8 +530,47 @@
 </head>
 <body>
 
-{# Running footer MUST be declared before content so WeasyPrint activates it on page 1 #}
+{# Running footer (signatures + footer info) — declared before content so WeasyPrint activates it on page 1 #}
 <div class="page-footer">
+  <div class="signatures">
+    <div class="sig-cell">
+      {% if lab.settings.tech_signature_path %}
+        <img src="{{ lab.settings.tech_signature_path }}" class="sig-img" alt="signature">
+      {% else %}
+        <div class="sig-stamp-wrap"><span class="sig-stamp"></span></div>
+      {% endif %}
+      <div class="sig-name">{{ lab.settings.tech_name|default:"Damundar Mahto" }}</div>
+      <div class="sig-sub">{{ lab.settings.tech_qualification|default:"CMLT" }}, {{ lab.settings.tech_designation|default:"Lab.Technologist" }}</div>
+      <div class="sig-sub">Reg.No.{{ lab.settings.tech_reg_no|default:"009406" }}</div>
+    </div>
+
+    <div class="sig-cell">
+      {% if lab.settings.tech2_signature_path %}
+        <img src="{{ lab.settings.tech2_signature_path }}" class="sig-img" alt="signature">
+      {% else %}
+        <div class="sig-stamp-wrap"><span class="sig-stamp"></span></div>
+      {% endif %}
+      <div class="sig-name">{{ lab.settings.tech2_name|default:"Sudhanshu Suman" }}</div>
+      <div class="sig-sub">{{ lab.settings.tech2_qualification|default:"BMLT" }}, {{ lab.settings.tech2_designation|default:"Lab.Technologist" }}</div>
+      <div class="sig-sub">Reg.No.{{ lab.settings.tech2_reg_no|default:"12559" }}</div>
+    </div>
+
+    <div class="sig-cell">
+      {% if lab.settings.pathologist_signature_path %}
+        <img src="{{ lab.settings.pathologist_signature_path }}" class="sig-img" alt="signature">
+      {% else %}
+        <div class="sig-stamp-wrap"><span class="sig-stamp"></span></div>
+      {% endif %}
+      <div class="sig-name">Dr. {{ lab.settings.pathologist_name|default:"R.Kumar" }}</div>
+      <div class="sig-sub">{{ lab.settings.pathologist_qualification|default:"MBBS, MD(Pathology)" }}</div>
+      {% if lab.settings.pathologist_reg_no %}
+        <div class="sig-sub">Reg.No.{{ lab.settings.pathologist_reg_no }}</div>
+      {% else %}
+        <div class="sig-sub">Reg.No.3100</div>
+      {% endif %}
+    </div>
+  </div>
+
   <div class="footer-info">
     <div class="fi-left">
       To Check Report Authenticity by Scanning QR Code on Top<br>
@@ -653,11 +706,13 @@
 {# ═══════════════════ RESULTS ═══════════════════ #}
 {% for category in categories %}
 
+{% if forloop.first %}
 <div class="test-title-wrap">
   <div class="ttw-side"><hr></div>
-  <div class="ttw-title">{{ category.name }}</div>
+  <div class="ttw-title">{{ report.report_template.name|default:category.name }}</div>
   <div class="ttw-side"><hr></div>
 </div>
+{% endif %}
 
 <table class="results">
   <thead>
@@ -689,13 +744,6 @@
       <tr>
         <td class="col-test">
           <span class="test-name">{{ r.test.name }}</span>
-          {% if r.method_used or r.test.sample_type %}
-            <span class="test-sub">
-              {% if r.method_used %}{{ r.method_used }}{% endif %}
-              {% if r.method_used and r.test.sample_type %}, {% endif %}
-              {% if r.test.sample_type %}{{ r.test.sample_type }}{% endif %}
-            </span>
-          {% endif %}
         </td>
         <td class="col-result">{{ r.result_value }}</td>
         <td class="col-status">
@@ -739,35 +787,6 @@
 {% endwith %}
 
 <div class="end-marker">**** End of Report ****</div>
-
-{# ═══════════════════ SIGNATURES (two-up: technologist | pathologist) ═══════════════════ #}
-<div class="signatures sig-two">
-  <div class="sig-cell">
-    {% if lab.settings.tech_signature_path %}
-      <img src="{{ lab.settings.tech_signature_path }}" class="sig-img" alt="signature">
-    {% else %}
-      <div class="sig-stamp-wrap"><span class="sig-stamp"></span></div>
-    {% endif %}
-    <div class="sig-name">{{ lab.settings.tech_name|default:"Deepak Kumar" }}</div>
-    <div class="sig-sub">{{ lab.settings.tech_qualification|default:"DMLT, BMLT" }}</div>
-    <div class="sig-sub">{{ lab.settings.tech_designation|default:"Lab.Technologist" }}</div>
-  </div>
-
-  <div class="sig-cell">
-    {% if lab.settings.pathologist_signature_path %}
-      <img src="{{ lab.settings.pathologist_signature_path }}" class="sig-img" alt="signature">
-    {% else %}
-      <div class="sig-stamp-wrap"><span class="sig-stamp"></span></div>
-    {% endif %}
-    <div class="sig-name">Dr. {{ lab.settings.pathologist_name|default:"R.Kumar" }}</div>
-    <div class="sig-sub">{{ lab.settings.pathologist_qualification|default:"MBBS, MD(Pathology)" }}</div>
-    {% if lab.settings.pathologist_reg_no %}
-      <div class="sig-sub">Reg.No.{{ lab.settings.pathologist_reg_no }}</div>
-    {% else %}
-      <div class="sig-sub">Reg.No.3100</div>
-    {% endif %}
-  </div>
-</div>
 
 </div>{# /.content #}
 
