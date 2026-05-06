@@ -116,7 +116,7 @@ def _build_all_tests_report() -> Report:
             lab=lab,
             name="Sample Patient",
             sex="M",
-            age_years=35,
+            age=35,
             phone="0000000000",
         )
 
@@ -204,7 +204,7 @@ def _build_template_report(template: ReportTemplate) -> Report:
     patient = Patient.objects.filter(lab=lab).first()
     if patient is None:
         patient = Patient.objects.create(
-            lab=lab, name="Sample Patient", sex="M", age_years=35, phone="0000000000",
+            lab=lab, name="Sample Patient", sex="M", age=35, phone="0000000000",
         )
 
     accession = _slug_for_accession(template.code)

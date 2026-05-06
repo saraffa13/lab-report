@@ -1,0 +1,193 @@
+{% extends "pdf/reports/generic.html" %}
+
+{% comment %}
+  Shared layout for two-test templates (Typhidot IgG/IgM, Dengue IgG/IgM,
+  Malaria Antigen Pv/Pf, Malaria Smear thin/thick). Adds two boxes —
+  a result-interpretation matrix grid and a clinical interpretation block —
+  branched by report.report_template.code, mirroring the lipid template style.
+{% endcomment %}
+
+{% block extra_style %}
+  /* ── Tighten the small result table so two boxes fit comfortably below ── */
+  table.results thead th { padding: 2px 8px; font-size: 7.5pt; }
+  table.results tbody td  { padding: 2px 8px; font-size: 7.5pt; line-height: 1.2; }
+  .test-title-wrap { margin: 14px 0 6px 0; }
+  .ttw-title { font-size: 11pt; }
+
+  /* ── Result-interpretation matrix grid (mirrors .lp-extras / .thy-extras) ── */
+  .dt-extras {
+    margin-top: 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 2px;
+    overflow: hidden;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .dt-extras .dt-title {
+    background: #f1f5f9;
+    color: #1f2937;
+    font-weight: 700;
+    font-size: 8pt;
+    padding: 3px 6px;
+    border-bottom: 1px solid #cbd5e1;
+  }
+  .dt-extras table.dt-grid {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 7.5pt;
+    color: #1f2937;
+  }
+  .dt-extras table.dt-grid th,
+  .dt-extras table.dt-grid td {
+    border: 1px solid #cbd5e1;
+    padding: 2px 6px;
+    vertical-align: top;
+    text-align: left;
+    line-height: 1.25;
+  }
+  .dt-extras table.dt-grid th {
+    background: #f8fafc;
+    font-weight: 700;
+    font-size: 7.5pt;
+  }
+  .dt-extras .dt-pos { color: #b91c1c; font-weight: 700; }
+  .dt-extras .dt-neg { color: #15803d; font-weight: 700; }
+
+  /* ── Interpretation block (matches lipid / thyroid styling) ── */
+  .dt-interp {
+    margin-top: 6px;
+    border: 1px solid #cbd5e1;
+    border-radius: 2px;
+    padding: 4px 9px;
+    font-size: 8pt;
+    color: #1f2937;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .dt-interp .dt-interp-title {
+    font-weight: 700;
+    font-size: 8.5pt;
+    margin-bottom: 3px;
+  }
+  .dt-interp .dt-section {
+    font-weight: 700;
+    margin: 5px 0 2px 0;
+  }
+  .dt-interp ul { margin: 0 0 0 12px; }
+  .dt-interp li { margin-bottom: 2px; line-height: 1.3; }
+{% endblock %}
+
+{% block extra_content %}
+{% with code=report.report_template.code %}
+
+{# ─────────── Result-Interpretation Matrix ─────────── #}
+{% if code == "TYPHIDOT" %}
+<div class="dt-extras">
+  <div class="dt-title">Result Interpretation — Typhidot IgM &amp; IgG</div>
+  <table class="dt-grid">
+    <thead>
+      <tr><th>IgM</th><th>IgG</th><th>Interpretation</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="dt-pos">Positive</span></td><td><span class="dt-neg">Negative</span></td><td>Acute / current typhoid infection.</td></tr>
+      <tr><td><span class="dt-pos">Positive</span></td><td><span class="dt-pos">Positive</span></td><td>Recent or chronic / re-infection with typhoid.</td></tr>
+      <tr><td><span class="dt-neg">Negative</span></td><td><span class="dt-pos">Positive</span></td><td>Past infection or post-vaccination.</td></tr>
+      <tr><td><span class="dt-neg">Negative</span></td><td><span class="dt-neg">Negative</span></td><td>No infection — or very early stage; repeat in 5–7 days if clinically suspicious.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+{% elif code == "DEN-IGGM" %}
+<div class="dt-extras">
+  <div class="dt-title">Result Interpretation — Dengue IgM &amp; IgG</div>
+  <table class="dt-grid">
+    <thead>
+      <tr><th>IgM</th><th>IgG</th><th>Interpretation</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="dt-pos">Positive</span></td><td><span class="dt-neg">Negative</span></td><td>Acute primary dengue infection.</td></tr>
+      <tr><td><span class="dt-pos">Positive</span></td><td><span class="dt-pos">Positive</span></td><td>Acute secondary infection — higher risk of DHF / DSS.</td></tr>
+      <tr><td><span class="dt-neg">Negative</span></td><td><span class="dt-pos">Positive</span></td><td>Past dengue infection.</td></tr>
+      <tr><td><span class="dt-neg">Negative</span></td><td><span class="dt-neg">Negative</span></td><td>No serological evidence — NS1 antigen may still be positive in early illness.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+{% elif code == "MP-AG" %}
+<div class="dt-extras">
+  <div class="dt-title">Result Interpretation — Malaria Rapid Antigen</div>
+  <table class="dt-grid">
+    <thead>
+      <tr><th>P. vivax (Pv)</th><th>P. falciparum (Pf)</th><th>Interpretation</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="dt-pos">Positive</span></td><td><span class="dt-neg">Negative</span></td><td>Plasmodium vivax infection.</td></tr>
+      <tr><td><span class="dt-neg">Negative</span></td><td><span class="dt-pos">Positive</span></td><td>Plasmodium falciparum infection — risk of severe malaria.</td></tr>
+      <tr><td><span class="dt-pos">Positive</span></td><td><span class="dt-pos">Positive</span></td><td>Mixed infection — treat for falciparum.</td></tr>
+      <tr><td><span class="dt-neg">Negative</span></td><td><span class="dt-neg">Negative</span></td><td>No malaria antigen detected — repeat / smear if clinically suspicious.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+{% elif code == "MP-SMEAR" %}
+<div class="dt-extras">
+  <div class="dt-title">Result Interpretation — Peripheral Smear</div>
+  <table class="dt-grid">
+    <thead>
+      <tr><th>Thick Smear</th><th>Thin Smear</th><th>Interpretation</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Parasites detected</td><td>Species identified, parasites quantified</td><td>Confirmed malaria — record species and parasite density.</td></tr>
+      <tr><td>Parasites detected</td><td>Species not clearly identified</td><td>Active malaria — repeat thin smear or rapid antigen for species typing.</td></tr>
+      <tr><td>Not detected</td><td>Not detected</td><td>No parasites in this sample. Repeat smears every 8–12 h for 48 h if suspicion persists.</td></tr>
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{# ─────────── Interpretation block ─────────── #}
+<div class="dt-interp">
+  <div class="dt-interp-title">Interpretation:</div>
+
+  {% if code == "TYPHIDOT" %}
+    <ul>
+      <li>Typhidot detects IgM and IgG antibodies against the 50 kDa outer-membrane protein of <i>Salmonella typhi</i>.</li>
+      <li>IgM rises within the first week of fever and disappears by 6 weeks; IgG rises later and persists for years.</li>
+      <li>Compared to the Widal test it is more specific in early infection and less affected by vaccination.</li>
+      <li>Confirm acute infection with blood / bone-marrow culture, especially before starting empirical therapy.</li>
+      <li>Typhidot can remain positive in past infection; correlate with clinical features.</li>
+    </ul>
+
+  {% elif code == "DEN-IGGM" %}
+    <ul>
+      <li>IgM antibodies appear 4–5 days after fever onset and persist 2–3 months — marker of recent infection.</li>
+      <li>IgG appears within 7–10 days in primary infection and rises rapidly in secondary infection due to immunological memory.</li>
+      <li>An <b>IgM-positive, IgG-positive</b> pattern indicates a secondary infection, which carries the highest risk of dengue hemorrhagic fever and dengue shock syndrome.</li>
+      <li>Combine with NS1 antigen, platelet count and hematocrit for staging and warning-sign assessment.</li>
+      <li>Negative serology in early illness does not exclude dengue — repeat in 5–7 days.</li>
+    </ul>
+
+  {% elif code == "MP-AG" %}
+    <ul>
+      <li>The rapid antigen test detects HRP-2 (specific to <i>P. falciparum</i>) and pLDH / aldolase (pan-malaria, for <i>P. vivax</i>).</li>
+      <li>Sensitivity drops at parasite density &lt; 100/µL — confirm with peripheral smear and quantification.</li>
+      <li>HRP-2 may persist for 2–4 weeks after successful treatment, so a positive Pf result in a treated patient does not always indicate active infection.</li>
+      <li>P. falciparum infection mandates urgent assessment for severe malaria (cerebral involvement, ARDS, AKI, hypoglycaemia, severe anaemia).</li>
+    </ul>
+
+  {% elif code == "MP-SMEAR" %}
+    <ul>
+      <li>Microscopy of Giemsa- or Leishman-stained thick and thin smears remains the gold standard for malaria diagnosis.</li>
+      <li><b>Thick smear</b> — concentrated, used for detection (10–30× more sensitive than thin smear).</li>
+      <li><b>Thin smear</b> — used for species identification and parasite density (% parasitised RBCs).</li>
+      <li>Trophozoites, schizonts and gametocytes may be seen depending on stage; gametocyte-only smears indicate carrier state, not active illness.</li>
+      <li>A single negative smear does not exclude malaria — repeat every 8–12 hours for 48 hours when clinical suspicion remains.</li>
+    </ul>
+
+  {% else %}
+    <ul><li>Correlate clinically. Reference ranges are for adult population unless otherwise stated.</li></ul>
+  {% endif %}
+</div>
+
+{% endwith %}
+{% endblock %}

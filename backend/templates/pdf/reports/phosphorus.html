@@ -1,0 +1,66 @@
+{% extends "pdf/reports/generic.html" %}
+
+{% block extra_style %}
+  /* ── Phosphorus interpretation box (matches Thyroid styling) ── */
+  .phos-interp {
+    margin-top: 16px;
+    border: 1px solid #cbd5e1;
+    border-radius: 2px;
+    padding: 4px 8px;
+    font-size: 6.5pt;
+    color: #1f2937;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .phos-interp .phos-lead {
+    font-weight: 700;
+    font-size: 7pt;
+    margin-bottom: 3px;
+  }
+  .phos-interp .phos-section {
+    font-weight: 700;
+    font-size: 7pt;
+    margin: 5px 0 2px 0;
+  }
+  .phos-interp ul {
+    margin: 0 0 0 12px;
+  }
+  .phos-interp li {
+    margin-bottom: 2px;
+    line-height: 1.25;
+  }
+  .phos-interp p {
+    margin: 2px 0;
+    line-height: 1.25;
+  }
+{% endblock %}
+
+{% block extra_content %}
+<div class="phos-interp">
+  <div class="phos-lead">Interpretation:</div>
+  <ul>
+    <li>This will give an idea of renal and bone diseases.</li>
+  </ul>
+
+  <div class="phos-section">Increased Phosphorus Or Hyperphosphatemia:</div>
+  <ul>
+    <li>Renal diseases with increased blood urea (BUN) and creatinine.</li>
+    <li>Hypoparathyroidism with raised phosphate and decreased calcium. But renal function will be normal.</li>
+    <li>Liver diseases and cirrhosis.</li>
+    <li>Acromegaly.</li>
+    <li>Increased dietary intake.</li>
+    <li>Sarcoidosis.</li>
+    <li>Acidosis.</li>
+    <li>Hemolytic anemia.</li>
+  </ul>
+
+  <div class="phos-section">Decreased Level Of Phosphorus Or Hypophosphatemia:</div>
+  <ul>
+    <li>Decreased intestinal absorption.</li>
+    <li>Rickets (Vit. D deficiency).</li>
+    <li>Vomiting and severe diarrhea.</li>
+    <li>Severe malnutrition and malabsorption.</li>
+    <li>Acute alcoholism.</li>
+  </ul>
+</div>
+{% endblock %}

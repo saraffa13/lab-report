@@ -1,0 +1,148 @@
+{% extends "pdf/reports/generic.html" %}
+
+{% block extra_style %}
+  /* ── Lipid: tighter result rows so both boxes fit on the same page ── */
+  table.results thead th { padding: 2px 8px; font-size: 7pt; }
+  table.results tbody td  { padding: 1.5px 8px; font-size: 7pt; line-height: 1.15; }
+  .test-title-wrap { margin: 14px 0 6px 0; }
+  .ttw-title { font-size: 11pt; }
+
+  /* ── Lipid Profile extras: ATP-III risk grid + interpretation ── */
+  .lp-extras {
+    margin-top: 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 2px;
+    overflow: hidden;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .lp-extras .lp-title {
+    background: #f1f5f9;
+    color: #1f2937;
+    font-weight: 700;
+    font-size: 7pt;
+    padding: 3px 6px;
+    border-bottom: 1px solid #cbd5e1;
+  }
+  .lp-extras table.lp-grid {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 6pt;
+    color: #1f2937;
+  }
+  .lp-extras table.lp-grid th,
+  .lp-extras table.lp-grid td {
+    border: 1px solid #cbd5e1;
+    padding: 1.5px 5px;
+    vertical-align: top;
+    text-align: left;
+    line-height: 1.2;
+  }
+  .lp-extras table.lp-grid th {
+    background: #f8fafc;
+    font-weight: 700;
+    font-size: 6pt;
+  }
+  .lp-extras table.lp-grid td.lp-cat { font-weight: 700; white-space: nowrap; }
+
+  .lp-interp {
+    margin-top: 5px;
+    border: 1px solid #cbd5e1;
+    border-radius: 2px;
+    padding: 3px 8px;
+    font-size: 7pt;
+    color: #1f2937;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .lp-interp .lp-interp-title {
+    font-weight: 700;
+    font-size: 7.5pt;
+    margin-bottom: 2px;
+  }
+  .lp-interp ul { margin: 0 0 0 11px; }
+  .lp-interp li { margin-bottom: 1.5px; line-height: 1.2; }
+{% endblock %}
+
+{% block extra_content %}
+{# ─────────── ATP-III Risk Categories grid ─────────── #}
+<div class="lp-extras">
+  <div class="lp-title">ATP-III Risk Categories (mg/dL)</div>
+  <table class="lp-grid">
+    <thead>
+      <tr>
+        <th style="width:24%">Test</th>
+        <th>Optimal / Desirable</th>
+        <th>Borderline</th>
+        <th>High</th>
+        <th>Very High</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="lp-cat">Total Cholesterol</td>
+        <td>&lt; 200</td>
+        <td>200 – 239</td>
+        <td>&ge; 240</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td class="lp-cat">LDL Cholesterol</td>
+        <td>&lt; 100</td>
+        <td>130 – 159</td>
+        <td>160 – 189</td>
+        <td>&ge; 190</td>
+      </tr>
+      <tr>
+        <td class="lp-cat">HDL Cholesterol</td>
+        <td>&ge; 60 (protective)</td>
+        <td>40 – 59</td>
+        <td>&lt; 40 (low — risk)</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td class="lp-cat">Triglycerides</td>
+        <td>&lt; 150</td>
+        <td>150 – 199</td>
+        <td>200 – 499</td>
+        <td>&ge; 500</td>
+      </tr>
+      <tr>
+        <td class="lp-cat">Non-HDL Cholesterol</td>
+        <td>&lt; 130</td>
+        <td>130 – 159</td>
+        <td>160 – 189</td>
+        <td>&ge; 190</td>
+      </tr>
+      <tr>
+        <td class="lp-cat">Total Cholesterol : HDL</td>
+        <td>&lt; 3.5 (ideal)</td>
+        <td>3.5 – 5.0</td>
+        <td>&gt; 5.0</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td class="lp-cat">LDL : HDL Ratio</td>
+        <td>&lt; 2.5 (ideal)</td>
+        <td>2.5 – 3.5</td>
+        <td>&gt; 3.5</td>
+        <td>—</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+{# ─────────── Interpretation ─────────── #}
+<div class="lp-interp">
+  <div class="lp-interp-title">Interpretation:</div>
+  <ul>
+    <li>The lipid profile is the primary screen for cardiovascular risk and dyslipidaemia. A 12-hour fast is recommended for accurate triglyceride measurement.</li>
+    <li><b>LDL cholesterol</b> is the principal target of lipid-lowering therapy; lower is better in patients with established atherosclerotic disease, diabetes, or multiple risk factors.</li>
+    <li><b>HDL cholesterol</b> is inversely related to coronary risk. Levels &lt; 40 mg/dL (men) or &lt; 50 mg/dL (women) are considered low.</li>
+    <li><b>Elevated triglycerides</b> are commonly seen in metabolic syndrome, diabetes, obesity, alcoholism, hypothyroidism and nephrotic syndrome. Levels &ge; 500 mg/dL increase the risk of acute pancreatitis.</li>
+    <li><b>Non-HDL cholesterol</b> (Total – HDL) captures all atherogenic particles (LDL + VLDL + remnants) and is a better predictor of cardiovascular events in patients with high triglycerides than LDL alone.</li>
+    <li><b>TC/HDL and LDL/HDL ratios</b> integrate the protective and atherogenic fractions; ratios above the "ideal" thresholds indicate elevated risk.</li>
+    <li>Persistent dyslipidaemia warrants lifestyle modification — diet, exercise, weight reduction, smoking cessation — and statin therapy where indicated by overall cardiovascular risk.</li>
+  </ul>
+</div>
+{% endblock %}

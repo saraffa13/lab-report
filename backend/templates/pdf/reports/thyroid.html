@@ -1,0 +1,109 @@
+{% extends "pdf/reports/generic.html" %}
+
+{% block extra_style %}
+  /* ── Thyroid-specific extras: pregnancy / cord-blood reference box and interpretation ── */
+  .thy-extras {
+    margin-top: 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 2px;
+    overflow: hidden;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .thy-extras .thy-title {
+    background: #f1f5f9;
+    color: #1f2937;
+    font-weight: 700;
+    font-size: 7pt;
+    padding: 3px 6px;
+    border-bottom: 1px solid #cbd5e1;
+  }
+  .thy-extras table.thy-grid {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 6.5pt;
+    color: #1f2937;
+  }
+  .thy-extras table.thy-grid th,
+  .thy-extras table.thy-grid td {
+    border: 1px solid #cbd5e1;
+    padding: 2px 6px;
+    vertical-align: top;
+    text-align: left;
+    line-height: 1.25;
+  }
+  .thy-extras table.thy-grid th {
+    background: #f8fafc;
+    font-weight: 700;
+    font-size: 6.5pt;
+  }
+  .thy-extras .thy-empty { background: #fff; }
+
+  .thy-interp {
+    margin-top: 6px;
+    border: 1px solid #cbd5e1;
+    border-radius: 2px;
+    padding: 4px 8px;
+    font-size: 6.5pt;
+    color: #1f2937;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .thy-interp .thy-interp-title {
+    font-weight: 700;
+    font-size: 7pt;
+    margin-bottom: 3px;
+  }
+  .thy-interp ul { margin: 0 0 0 12px; }
+  .thy-interp li { margin-bottom: 2px; line-height: 1.25; }
+{% endblock %}
+
+{% block extra_content %}
+{# ─────────── Pregnancy & Cord-Blood reference grid ─────────── #}
+<div class="thy-extras">
+  <div class="thy-title">Pregnancy &amp; Cord Blood</div>
+  <table class="thy-grid">
+    <thead>
+      <tr>
+        <th>T3 (Triiodothyronine)</th>
+        <th>T4 (Thyroxine)</th>
+        <th>TSH (Thyroid Stimulating Hormone)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>First Trimester &nbsp;: 0.81–1.90 ng/mL</td>
+        <td>15 to 40 weeks: 9.1–14.0 µg/dL</td>
+        <td>First Trimester &nbsp;: 0.24–2.99 µIU/mL</td>
+      </tr>
+      <tr>
+        <td>Second &amp; Third Trimester: 1.00–2.60 ng/mL</td>
+        <td class="thy-empty"></td>
+        <td>Second Trimester: 0.46–2.95 µIU/mL</td>
+      </tr>
+      <tr>
+        <td class="thy-empty"></td>
+        <td class="thy-empty"></td>
+        <td>Third Trimester &nbsp;: 0.43–2.78 µIU/mL</td>
+      </tr>
+      <tr>
+        <td>Cord Blood: 0.30–0.70 ng/mL</td>
+        <td>Cord Blood: 7.4–13.0 µg/dL</td>
+        <td>Cord Blood: &nbsp;2.3–13.2 µIU/mL</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+{# ─────────── Interpretation ─────────── #}
+<div class="thy-interp">
+  <div class="thy-interp-title">Interpretation:</div>
+  <ul>
+    <li>Thyroid gland is a butterfly-shaped endocrine gland that is normally located in the lower front of the neck. The thyroid's job is to make thyroid hormones, which are secreted into the blood and then carried to every tissue in the body. Thyroid hormones help the body use energy, stay warm and keep the brain, heart, muscles, and other organs working as they should.</li>
+    <li>Thyroid produces two major hormones: triiodothyronine (T3) and thyroxine (T4). If thyroid gland doesn't produce enough of these hormones, you may experience symptoms such as weight gain, lack of energy, and depression. This condition is called hypothyroidism.</li>
+    <li>Thyroid gland produces too many hormones, you may experience weight loss, high levels of anxiety, tremors, and a sense of being on a high. This is called hyperthyroidism.</li>
+    <li>TSH interacts with specific cell receptors on the thyroid cell surface and exerts two main actions. The first action is to stimulate cell reproduction and hypertrophy. Secondly, TSH stimulates the thyroid gland to synthesize and secrete T3 and T4.</li>
+    <li>The ability to quantitate circulating levels of TSH is important in evaluating thyroid function. It is especially useful in the differential diagnosis of primary (thyroid) from secondary (pituitary) and tertiary (hypothalamus) hypothyroidism. In primary hypothyroidism, TSH levels are significantly elevated, while in secondary and tertiary hypothyroidism, TSH levels are low.</li>
+  </ul>
+</div>
+{% endblock %}

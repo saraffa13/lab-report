@@ -1,0 +1,374 @@
+{% extends "pdf/reports/generic.html" %}
+
+{% comment %}
+  Shared layout for the "single test" templates (one or two tests per template).
+  All interpretation content lives here, keyed by report.report_template.code.
+  Styling matches the Thyroid + Phosphorus boxes for visual consistency.
+{% endcomment %}
+
+{% block extra_style %}
+  .st-interp {
+    margin-top: 16px;
+    border: 1px solid #cbd5e1;
+    border-radius: 2px;
+    padding: 4px 10px 6px 10px;
+    font-size: 6.5pt;
+    color: #1f2937;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .st-interp .st-lead {
+    font-weight: 700;
+    font-size: 7pt;
+    margin-bottom: 3px;
+  }
+  .st-interp .st-section {
+    font-weight: 700;
+    font-size: 7pt;
+    margin: 6px 0 2px 0;
+  }
+  .st-interp ul { margin: 0 0 0 12px; }
+  .st-interp li { margin-bottom: 2px; line-height: 1.25; }
+  .st-interp p  { margin: 2px 0; line-height: 1.25; }
+{% endblock %}
+
+{% block extra_content %}
+{% with code=report.report_template.code %}
+<div class="st-interp">
+
+  {% if code == "BILIRUBIN" %}
+    <div class="st-lead">Interpretation:</div>
+    <ul><li>Bilirubin is a yellow pigment produced when red blood cells break down. It is conjugated by the liver and excreted in bile.</li></ul>
+    <div class="st-section">Increased Total Bilirubin / Hyperbilirubinemia:</div>
+    <ul>
+      <li>Hemolytic anemia (raised Indirect Bilirubin).</li>
+      <li>Viral, alcoholic or drug-induced hepatitis.</li>
+      <li>Cirrhosis of the liver.</li>
+      <li>Bile duct obstruction — gallstones, tumours (raised Direct Bilirubin).</li>
+      <li>Gilbert's syndrome, Crigler-Najjar syndrome.</li>
+      <li>Physiological / pathological neonatal jaundice.</li>
+    </ul>
+    <div class="st-section">Decreased Bilirubin:</div>
+    <ul><li>Generally not clinically significant.</li></ul>
+
+  {% elif code == "CHOL" %}
+    <div class="st-lead">Interpretation:</div>
+    <ul><li>Total Cholesterol is a key marker of cardiovascular risk. ATP-III categories: Desirable &lt; 200 mg/dL, Borderline-High 200–239, High &ge; 240.</li></ul>
+    <div class="st-section">Increased Cholesterol:</div>
+    <ul>
+      <li>Atherosclerosis, coronary artery disease.</li>
+      <li>Familial hypercholesterolemia.</li>
+      <li>Hypothyroidism.</li>
+      <li>Nephrotic syndrome, obstructive jaundice.</li>
+      <li>Diabetes mellitus, obesity.</li>
+      <li>High saturated-fat / sedentary lifestyle.</li>
+    </ul>
+    <div class="st-section">Decreased Cholesterol:</div>
+    <ul>
+      <li>Severe liver disease.</li>
+      <li>Malabsorption / malnutrition.</li>
+      <li>Hyperthyroidism.</li>
+    </ul>
+
+  {% elif code == "TG" %}
+    <div class="st-lead">Interpretation:</div>
+    <ul><li>Triglycerides are the most common form of fat in the body. ATP-III categories: Normal &lt; 150 mg/dL, Borderline 150–199, High 200–499, Very High &ge; 500.</li></ul>
+    <div class="st-section">Increased Triglycerides:</div>
+    <ul>
+      <li>Diabetes mellitus, metabolic syndrome.</li>
+      <li>Obesity, sedentary lifestyle.</li>
+      <li>Alcohol abuse.</li>
+      <li>Hypothyroidism, nephrotic syndrome.</li>
+      <li>Familial hypertriglyceridemia.</li>
+      <li>Acute pancreatitis (TG &gt; 500 mg/dL).</li>
+    </ul>
+    <div class="st-section">Decreased Triglycerides:</div>
+    <ul>
+      <li>Malabsorption, malnutrition.</li>
+      <li>Hyperthyroidism.</li>
+    </ul>
+
+  {% elif code == "HBA1C-T" %}
+    <div class="st-lead">Interpretation:</div>
+    <ul><li>HbA1c reflects average plasma glucose over the past 8–12 weeks and is the gold standard for monitoring glycaemic control.</li></ul>
+    <div class="st-section">ADA Categories:</div>
+    <ul>
+      <li>Non-diabetic: &lt; 5.7%</li>
+      <li>Prediabetes: 5.7–6.4%</li>
+      <li>Diabetes: &ge; 6.5%</li>
+      <li>Therapeutic target for most diabetics: &lt; 7%</li>
+    </ul>
+    <div class="st-section">Falsely Low HbA1c:</div>
+    <ul>
+      <li>Hemolytic anemia, recent blood loss or transfusion.</li>
+      <li>Hemoglobinopathies (HbS, HbC).</li>
+    </ul>
+    <div class="st-section">Falsely High HbA1c:</div>
+    <ul>
+      <li>Iron-deficiency anemia.</li>
+      <li>Splenectomy, uremia.</li>
+    </ul>
+
+  {% elif code == "VITD-T" %}
+    <div class="st-lead">Interpretation:</div>
+    <ul><li>Vitamin D 25-Hydroxy is the storage form and the best marker of vitamin D status.</li></ul>
+    <div class="st-section">Status Categories:</div>
+    <ul>
+      <li>Deficient: &lt; 20 ng/mL</li>
+      <li>Insufficient: 20–29 ng/mL</li>
+      <li>Sufficient: 30–100 ng/mL</li>
+      <li>Toxic: &gt; 150 ng/mL</li>
+    </ul>
+    <div class="st-section">Causes Of Deficiency:</div>
+    <ul>
+      <li>Inadequate sun exposure, dark skin.</li>
+      <li>Malabsorption (celiac, IBD, gastric surgery).</li>
+      <li>Chronic kidney or liver disease.</li>
+      <li>Causes rickets in children and osteomalacia in adults.</li>
+    </ul>
+
+  {% elif code == "VITB12-T" %}
+    <div class="st-lead">Interpretation:</div>
+    <ul><li>Vitamin B12 is essential for red-cell maturation, DNA synthesis and neurological function.</li></ul>
+    <div class="st-section">Decreased Vitamin B12:</div>
+    <ul>
+      <li>Pernicious anemia (intrinsic-factor deficiency).</li>
+      <li>Strict vegetarian / vegan diet.</li>
+      <li>Atrophic gastritis, gastric bypass, ileal resection.</li>
+      <li>Inflammatory bowel disease, fish-tapeworm infection.</li>
+      <li>Long-term metformin or PPI therapy.</li>
+      <li>Causes megaloblastic anemia and peripheral neuropathy.</li>
+    </ul>
+    <div class="st-section">Increased Vitamin B12:</div>
+    <ul>
+      <li>Liver disease, myeloproliferative disorders.</li>
+    </ul>
+
+  {% elif code == "URINE-CT" %}
+    <div class="st-lead">Interpretation:</div>
+    <ul><li>Urine culture identifies the organism causing a urinary tract infection (UTI) and guides antibiotic therapy.</li></ul>
+    <div class="st-section">Significance of Growth:</div>
+    <ul>
+      <li>&ge; 10<sup>5</sup> CFU/mL of a single organism — significant.</li>
+      <li>10<sup>4</sup>–10<sup>5</sup> CFU/mL — possibly significant; correlate clinically.</li>
+      <li>&lt; 10<sup>4</sup> CFU/mL or mixed flora — likely contamination.</li>
+      <li>"No growth after 48 hours" — sterile sample.</li>
+    </ul>
+    <div class="st-section">Common Pathogens:</div>
+    <ul>
+      <li>Escherichia coli (most common).</li>
+      <li>Klebsiella, Proteus, Pseudomonas.</li>
+      <li>Enterococcus, Staphylococcus saprophyticus.</li>
+    </ul>
+
+  {% elif code == "HB-T" %}
+    <div class="st-lead">Interpretation:</div>
+    <ul><li>Haemoglobin (Hb) carries oxygen in red blood cells. Its level is the primary screen for anemia and polycythemia.</li></ul>
+    <div class="st-section">Decreased Hb / Anemia:</div>
+    <ul>
+      <li>Iron, B12 or folate deficiency.</li>
+      <li>Anemia of chronic disease, chronic kidney disease.</li>
+      <li>Acute or chronic blood loss.</li>
+      <li>Hemolysis, thalassemia, sickle cell disease.</li>
+      <li>Bone-marrow failure (aplastic anemia, leukemia).</li>
+    </ul>
+    <div class="st-section">Increased Hb:</div>
+    <ul>
+      <li>Polycythemia vera.</li>
+      <li>Chronic hypoxia — COPD, smoking, high altitude.</li>
+      <li>Dehydration (relative increase).</li>
+    </ul>
+
+  {% elif code == "UA-T" %}
+    <div class="st-lead">Interpretation:</div>
+    <ul><li>Uric acid is the end-product of purine metabolism. Persistently raised levels predispose to gout and uric-acid stones.</li></ul>
+    <div class="st-section">Increased Uric Acid / Hyperuricemia:</div>
+    <ul>
+      <li>Gout.</li>
+      <li>Renal failure, dehydration.</li>
+      <li>High-purine diet — red meat, organ meat, seafood, alcohol.</li>
+      <li>Thiazide / loop diuretics, low-dose aspirin.</li>
+      <li>Tumor lysis syndrome, leukemia, lymphoma.</li>
+      <li>Hypothyroidism, hyperparathyroidism.</li>
+    </ul>
+    <div class="st-section">Decreased Uric Acid:</div>
+    <ul>
+      <li>Wilson's disease, Fanconi syndrome.</li>
+      <li>SIADH, allopurinol therapy.</li>
+    </ul>
+
+  {% elif code == "BG-T" %}
+    <div class="st-lead">Interpretation:</div>
+    <ul><li>ABO and Rh(D) typing identifies the patient's major red-cell antigens — essential before transfusion, surgery and during pregnancy.</li></ul>
+    <div class="st-section">ABO System:</div>
+    <ul>
+      <li>Group A — A antigen on RBC, anti-B in plasma.</li>
+      <li>Group B — B antigen on RBC, anti-A in plasma.</li>
+      <li>Group AB — both antigens, no antibodies (universal recipient).</li>
+      <li>Group O — neither antigen, both antibodies (universal donor).</li>
+    </ul>
+    <div class="st-section">Rh System:</div>
+    <ul>
+      <li>Rh-positive: D antigen present.</li>
+      <li>Rh-negative: D antigen absent.</li>
+      <li>Rh-negative mothers carrying Rh-positive babies need anti-D prophylaxis to prevent hemolytic disease of the newborn.</li>
+    </ul>
+
+  {% elif code == "CA-T" %}
+    <div class="st-lead">Interpretation:</div>
+    <ul><li>Serum calcium reflects the balance between bone, kidneys, parathyroid hormone and vitamin D.</li></ul>
+    <div class="st-section">Increased Calcium / Hypercalcemia:</div>
+    <ul>
+      <li>Primary hyperparathyroidism.</li>
+      <li>Malignancy — multiple myeloma, bone metastases, PTHrP-secreting tumours.</li>
+      <li>Vitamin D toxicity, milk-alkali syndrome.</li>
+      <li>Sarcoidosis, granulomatous disease.</li>
+      <li>Thiazide diuretics.</li>
+    </ul>
+    <div class="st-section">Decreased Calcium / Hypocalcemia:</div>
+    <ul>
+      <li>Hypoparathyroidism, post-thyroidectomy.</li>
+      <li>Vitamin D deficiency, rickets, osteomalacia.</li>
+      <li>Chronic kidney disease.</li>
+      <li>Acute pancreatitis.</li>
+      <li>Hypoalbuminemia (correct for albumin).</li>
+    </ul>
+
+  {% elif code == "SGPT-T" %}
+    <div class="st-lead">Interpretation:</div>
+    <ul><li>SGPT (ALT) is a liver-specific enzyme. A rise indicates hepatocellular injury.</li></ul>
+    <div class="st-section">Increased SGPT:</div>
+    <ul>
+      <li>Viral hepatitis (A, B, C, E).</li>
+      <li>Non-alcoholic and alcoholic fatty liver disease.</li>
+      <li>Drug-induced hepatitis — paracetamol overdose, statins, antitubercular drugs.</li>
+      <li>Autoimmune hepatitis, Wilson's disease, hemochromatosis.</li>
+      <li>Cirrhosis (often only modestly raised).</li>
+      <li>Right-heart failure (congestive hepatopathy).</li>
+    </ul>
+
+  {% elif code == "SGOT-T" %}
+    <div class="st-lead">Interpretation:</div>
+    <ul><li>SGOT (AST) is found in liver, heart muscle, skeletal muscle, kidney and red blood cells. A rise reflects tissue injury but is less liver-specific than ALT.</li></ul>
+    <div class="st-section">Increased SGOT:</div>
+    <ul>
+      <li>Hepatitis, cirrhosis, fatty liver.</li>
+      <li>Acute myocardial infarction.</li>
+      <li>Skeletal-muscle injury, rhabdomyolysis.</li>
+      <li>Hemolytic anemia.</li>
+      <li>AST/ALT ratio &gt; 2 strongly suggests alcoholic liver disease.</li>
+    </ul>
+
+  {% elif code == "GGT" %}
+    <div class="st-lead">Interpretation:</div>
+    <ul><li>Gamma-Glutamyl Transferase (GGT) is the most sensitive enzyme for detecting cholestasis, biliary disease and chronic alcohol use. It rises before ALP and stays elevated longer.</li></ul>
+    <div class="st-section">Increased GGT:</div>
+    <ul>
+      <li>Chronic alcohol abuse — most sensitive single marker.</li>
+      <li>Biliary obstruction (gallstones, tumours, primary biliary cholangitis).</li>
+      <li>Intra-hepatic cholestasis — drugs, sepsis, pregnancy.</li>
+      <li>Acute and chronic hepatitis, cirrhosis, fatty liver.</li>
+      <li>Drug induction — phenytoin, barbiturates, oral contraceptives, rifampicin.</li>
+      <li>Pancreatitis, pancreatic cancer.</li>
+      <li>Congestive heart failure, acute myocardial infarction.</li>
+    </ul>
+    <div class="st-section">Clinical Use:</div>
+    <ul>
+      <li>An isolated raised ALP with normal GGT points to bone, not liver, origin.</li>
+      <li>Persistent elevation despite abstinence is a marker of poor prognosis in alcoholic liver disease.</li>
+    </ul>
+
+  {% elif code == "LDH" %}
+    <div class="st-lead">Interpretation:</div>
+    <ul><li>Lactate Dehydrogenase (LDH) is a non-specific marker of cellular injury — present in liver, heart, skeletal muscle, kidneys, brain, lungs and red blood cells.</li></ul>
+    <div class="st-section">Increased LDH:</div>
+    <ul>
+      <li>Hemolytic anemia, megaloblastic anemia (often markedly raised).</li>
+      <li>Acute myocardial infarction, congestive cardiac failure.</li>
+      <li>Hepatitis, cirrhosis, hepatic congestion.</li>
+      <li>Pulmonary embolism, pulmonary infarction.</li>
+      <li>Skeletal-muscle injury, rhabdomyolysis, muscular dystrophies.</li>
+      <li>Lymphoma, leukemia, germ-cell tumours — high cell turnover.</li>
+      <li>Renal infarction, acute kidney injury.</li>
+    </ul>
+    <div class="st-section">Clinical Use:</div>
+    <ul>
+      <li>Marker of disease activity and prognosis in lymphoma and germ-cell tumours.</li>
+      <li>LDH/AST ratio &gt; 5 suggests hemolysis rather than hepatocellular injury.</li>
+    </ul>
+
+  {% elif code == "DEN-NS1" %}
+    <div class="st-lead">Interpretation:</div>
+    <ul><li>Dengue NS1 (Non-Structural protein 1) antigen is the earliest marker of dengue infection — detectable from Day 1 of fever, persisting until Day 5–7. It allows acute diagnosis before antibodies appear.</li></ul>
+    <div class="st-section">Result Interpretation:</div>
+    <ul>
+      <li><b>Positive</b> — Acute dengue infection (current viraemia).</li>
+      <li><b>Negative</b> after Day 7 — does not exclude dengue; follow up with IgM / IgG serology.</li>
+      <li><b>Equivocal</b> — repeat in 24–48 hours.</li>
+    </ul>
+    <div class="st-section">Notes:</div>
+    <ul>
+      <li>Sensitivity 60–90% in primary infection; lower in secondary infection due to immune-complex masking.</li>
+      <li>Combine with platelet count, hematocrit and clinical assessment for severity grading.</li>
+      <li>Warning signs of severe dengue: persistent vomiting, abdominal pain, bleeding, lethargy, hepatomegaly, rising HCT with falling platelets.</li>
+    </ul>
+
+  {% elif code == "TSH" %}
+    <div class="st-lead">Interpretation:</div>
+    <ul><li>TSH is the most sensitive single test for thyroid dysfunction. It is secreted by the anterior pituitary and stimulates the thyroid to produce T3 and T4. Pregnancy-specific reference intervals apply.</li></ul>
+    <div class="st-section">Pregnancy &amp; Cord Blood Reference:</div>
+    <ul>
+      <li>First Trimester: 0.24–2.99 µIU/mL</li>
+      <li>Second Trimester: 0.46–2.95 µIU/mL</li>
+      <li>Third Trimester: 0.43–2.78 µIU/mL</li>
+      <li>Cord Blood: 2.3–13.2 µIU/mL</li>
+    </ul>
+    <div class="st-section">Increased TSH (Primary Hypothyroidism):</div>
+    <ul>
+      <li>Hashimoto's autoimmune thyroiditis (commonest cause).</li>
+      <li>Iodine deficiency, post-thyroidectomy, post-radioiodine.</li>
+      <li>Drugs — lithium, amiodarone, antithyroid drugs.</li>
+      <li>Subclinical hypothyroidism (TSH raised, T4 normal).</li>
+      <li>Recovery phase of non-thyroidal illness.</li>
+    </ul>
+    <div class="st-section">Decreased TSH (Hyperthyroidism):</div>
+    <ul>
+      <li>Graves' disease, toxic multinodular goitre, toxic adenoma.</li>
+      <li>Subacute / silent thyroiditis (early phase).</li>
+      <li>Excess thyroxine therapy.</li>
+      <li>Secondary / tertiary hypothyroidism (pituitary or hypothalamic — TSH inappropriately low with low T4).</li>
+      <li>Severe non-thyroidal illness ("sick-euthyroid").</li>
+    </ul>
+
+  {% elif code == "PHOS-T" %}
+    <div class="st-lead">Interpretation:</div>
+    <ul><li>This will give an idea of renal and bone diseases.</li></ul>
+    <div class="st-section">Increased Phosphorus Or Hyperphosphatemia:</div>
+    <ul>
+      <li>Renal diseases with increased blood urea (BUN) and creatinine.</li>
+      <li>Hypoparathyroidism with raised phosphate and decreased calcium. But renal function will be normal.</li>
+      <li>Liver diseases and cirrhosis.</li>
+      <li>Acromegaly.</li>
+      <li>Increased dietary intake.</li>
+      <li>Sarcoidosis.</li>
+      <li>Acidosis.</li>
+      <li>Hemolytic anemia.</li>
+    </ul>
+    <div class="st-section">Decreased Level Of Phosphorus Or Hypophosphatemia:</div>
+    <ul>
+      <li>Decreased intestinal absorption.</li>
+      <li>Rickets (Vit. D deficiency).</li>
+      <li>Vomiting and severe diarrhea.</li>
+      <li>Severe malnutrition and malabsorption.</li>
+      <li>Acute alcoholism.</li>
+    </ul>
+
+  {% else %}
+    {# Fallback for templates without a hand-written interpretation. #}
+    <div class="st-lead">Interpretation:</div>
+    <ul><li>Correlate clinically. Reference ranges are for adult population unless otherwise stated.</li></ul>
+  {% endif %}
+
+</div>
+{% endwith %}
+{% endblock %}

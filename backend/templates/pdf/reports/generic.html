@@ -368,18 +368,18 @@
   }
 
   .clinical-block {
-    margin-top: 12px;
+    margin-top: 14px;
     page-break-inside: avoid;
   }
   .clinical-block h3 {
-    font-size: 9.5pt;
-    margin: 4px 0 3px 0;
+    font-size: 8pt;
+    margin: 6px 0 3px 0;
     color: {{ lab.primary_color|default:"#1e3a8a" }};
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
-  .clinical-block p { margin: 3px 0; font-size: 9pt; text-align: justify; color: #374151; }
+  .clinical-block p { margin: 2px 0; font-size: 7.5pt; line-height: 1.3; text-align: justify; color: #374151; }
 
   /* ═══════════════════════════════════════════════
      END MARKER + SIGNATURES
@@ -415,7 +415,22 @@
     font-style: italic;
   }
   .sig-img { height: 26px; max-width: 110px; margin-bottom: 0; display: inline-block; object-fit: contain; }
-  .end-marker { margin: 6px 0 4px 0; font-size: 7pt; line-height: 1.1; padding: 2px 0; page-break-before: avoid; break-before: avoid; }
+  .end-marker {
+    margin: 10px auto 6px auto;
+    font-size: 8pt;
+    line-height: 1.1;
+    padding: 4px 14px;
+    page-break-before: avoid;
+    break-before: avoid;
+    display: inline-block;
+    background: #f1f5f9;
+    color: {{ lab.primary_color|default:"#1e3a8a" }};
+    border: 1px solid #cbd5e1;
+    border-radius: 3px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+  }
+  .end-marker-wrap { text-align: center; margin: 10px 0 6px 0; }
   .signatures { margin-top: 0; padding-top: 2px; }
   .sig-cell { padding: 0 8px; line-height: 1.15; }
   .sig-name { font-size: 6.5pt; margin-top: 0; line-height: 1.15; }
@@ -786,7 +801,10 @@
   {% endfor %}
 {% endwith %}
 
-<div class="end-marker">**** End of Report ****</div>
+{# Per-template extras (e.g. Thyroid pregnancy/cord-blood reference box) #}
+{% block extra_content %}{% endblock %}
+
+<div class="end-marker-wrap"><span class="end-marker">**** End of Report ****</span></div>
 
 </div>{# /.content #}
 
