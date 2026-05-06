@@ -237,30 +237,40 @@ class ReportService:
         from rest_framework.exceptions import ValidationError
 
         if data.phone:
+            # Look at *all* rows including soft-deleted ones — the DB unique
+            # constraint on (lab, phone) ignores deleted_at, so a soft-deleted
+            # patient with the same phone still blocks a fresh INSERT.
             existing = (
                 Patient.all_objects
-                .filter(lab=lab, phone=data.phone, deleted_at__isnull=True)
+                .filter(lab=lab, phone=data.phone)
                 .first()
             )
             if existing is not None:
                 incoming = (data.name or "").strip()
                 stored = (existing.name or "").strip()
-                # If the caller passed a different name, surface a clean 400 instead of
-                # silently overwriting someone else's record.
-                if incoming and stored and incoming.lower() != stored.lower():
+                # If a *live* patient owns the phone under a different name,
+                # surface a clean 400 instead of silently overwriting.
+                if (
+                    existing.deleted_at is None
+                    and incoming and stored
+                    and incoming.lower() != stored.lower()
+                ):
                     raise ValidationError({
                         "phone": [
                             f"Phone {data.phone} is already registered for "
                             f"\"{stored}\". Use a different phone or update that patient."
                         ]
                     })
-                # Same patient (or one without a stored name yet) — refresh fields.
-                if incoming and not stored:
+                # Otherwise reuse the row: refresh demographics, undelete if needed.
+                if incoming and (not stored or existing.deleted_at is not None):
                     existing.name = incoming
                 for field in ("sex", "age", "age_unit", "email", "address", "city", "blood_group"):
                     val = getattr(data, field, None)
                     if val not in (None, ""):
                         setattr(existing, field, val)
+                if existing.deleted_at is not None:
+                    existing.deleted_at = None
+                    existing.created_by = user  # treat as a fresh registration
                 existing.save()
                 return existing
 
