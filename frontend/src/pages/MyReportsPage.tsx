@@ -68,7 +68,7 @@ export default function MyReportsPage() {
                   </td>
                   <td className="px-4 py-3 text-on-surface font-medium">{r.patient_name}</td>
                   <td className="px-4 py-3 text-on-surface-variant">
-                    {r.template_name ?? "—"}
+                    {r.template_name ?? r.package_name ?? "—"}
                   </td>
                   <td className="px-4 py-3">
                     <span

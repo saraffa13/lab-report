@@ -307,7 +307,7 @@ export default function PatientDetailPage() {
                             </Link>
                           </td>
                           <td className="px-6 py-3.5 font-medium text-on-surface">
-                            {r.template_name ?? "—"}
+                            {r.template_name ?? r.package_name ?? "—"}
                           </td>
                           <td className="px-6 py-3.5">
                             <span

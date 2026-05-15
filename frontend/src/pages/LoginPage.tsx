@@ -30,8 +30,29 @@ export default function LoginPage() {
       // react-router's navigate() keeps the stale role and bounces patients to
       // /dashboard via the wildcard fallback.
       window.location.replace(redirectTo);
-    } catch {
-      setError(mode === "patient" ? "Invalid phone or password." : "Invalid email or password.");
+    } catch (err: unknown) {
+      const e = err as {
+        response?: { status?: number; data?: { detail?: string } };
+        code?: string;
+        message?: string;
+      };
+      const status = e?.response?.status;
+      const detail = e?.response?.data?.detail;
+      if (status === 401) {
+        setError(mode === "patient" ? "Invalid phone or password." : "Invalid email or password.");
+      } else if (status === 429) {
+        setError("Too many login attempts. Please wait a minute and try again.");
+      } else if (status === 503 || status === 502 || status === 504) {
+        setError("Server is waking up. Try again in a few seconds.");
+      } else if (e?.code === "ECONNABORTED" || (e?.message ?? "").toLowerCase().includes("network")) {
+        setError("Network error — check your connection and retry.");
+      } else if (detail) {
+        setError(detail);
+      } else if (status) {
+        setError(`Login failed (HTTP ${status}). Try again in a moment.`);
+      } else {
+        setError("Login failed. Try again.");
+      }
     } finally {
       setLoading(false);
     }

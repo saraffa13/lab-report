@@ -73,14 +73,17 @@ export default function ReportsListPage() {
 
   const templateOptions = useMemo(() => {
     const set = new Set<string>();
-    (data ?? []).forEach((r) => r.template_name && set.add(r.template_name));
+    (data ?? []).forEach((r) => {
+      const label = r.template_name ?? r.package_name;
+      if (label) set.add(label);
+    });
     return Array.from(set).sort();
   }, [data]);
 
   const filtered = useMemo(() => {
     return (data ?? []).filter((r) => {
       if (status && r.status.toLowerCase() !== status) return false;
-      if (templateFilter && r.template_name !== templateFilter) return false;
+      if (templateFilter && (r.template_name ?? r.package_name) !== templateFilter) return false;
       if (search) {
         const q = search.toLowerCase();
         if (
@@ -298,7 +301,7 @@ export default function ReportsListPage() {
                   </td>
                   <td className="py-2.5 px-5 font-semibold text-on-surface">{r.patient_name}</td>
                   <td className="py-2.5 px-5 text-on-surface-variant">
-                    {r.template_name ?? "—"}
+                    {r.template_name ?? r.package_name ?? "—"}
                   </td>
                   <td className="py-2.5 px-5">
                     <span

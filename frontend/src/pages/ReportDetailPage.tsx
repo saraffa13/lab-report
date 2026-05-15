@@ -122,7 +122,7 @@ export default function ReportDetailPage() {
             </span>
           </div>
           <h1 className="text-3xl md:text-4xl font-extrabold text-on-primary-fixed tracking-tight">
-            {report.template_name ?? "Ad-hoc Report"}
+            {report.template_name ?? report.package_name ?? "Ad-hoc Report"}
           </h1>
           <p className="text-on-surface-variant mt-2">
             Patient: <span className="font-semibold text-on-surface">{report.patient_name}</span>
