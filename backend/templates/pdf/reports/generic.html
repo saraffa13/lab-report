@@ -64,7 +64,7 @@
 
   .logo-text { display: table-cell; vertical-align: middle; }
   .lab-name {
-    font-size: 22pt;
+    font-size: 20pt;
     font-weight: 900;
     color: {{ lab.primary_color|default:"#1e3a8a" }};
     letter-spacing: 0.5px;
@@ -594,12 +594,14 @@
       </span>
     </div>
     <div class="fi-mid">
-      {% if lab.settings.iso_badge_path %}
-        <img src="{{ lab.settings.iso_badge_path }}" class="iso-badge" alt="ISO">
-      {% else %}
-        <img src="static/branding/iso.png" class="iso-badge" alt="ISO">
+      {% if not lab.settings.hide_iso %}
+        {% if lab.settings.iso_badge_path %}
+          <img src="{{ lab.settings.iso_badge_path }}" class="iso-badge" alt="ISO">
+        {% else %}
+          <img src="static/branding/iso.png" class="iso-badge" alt="ISO">
+        {% endif %}
+        <span class="accreditation">{% if lab.settings.iso_reg_no %}{{ lab.settings.iso_reg_no }}{% else %}ISO 9001:2015{% endif %}</span><br>
       {% endif %}
-      <span class="accreditation">{% if lab.settings.iso_reg_no %}{{ lab.settings.iso_reg_no }}{% else %}ISO 9001:2015{% endif %}</span><br>
       <span style="font-size:7pt;color:#6b7280;margin-top:3px;display:inline-block;">
         Generated on: {% now "d M, Y h:i A" %}
       </span>
@@ -629,11 +631,11 @@
   <tr>
     <td class="lh-logo-cell">
       <div class="logo-block">
-        <div class="logo-icon">
-          <img src="{{ lab.settings.brand_logo_path|default:'static/branding/patholab.png' }}" alt="{{ lab.name }}">
+        <div class="logo-icon"{% if lab.settings.logo_cell_width %} style="width:{{ lab.settings.logo_cell_width }};"{% endif %}>
+          <img src="{{ lab.settings.brand_logo_path|default:'static/branding/patholab.png' }}" alt="{{ lab.name }}"{% if lab.settings.logo_img_height %} style="height:{{ lab.settings.logo_img_height }};max-width:{{ lab.settings.logo_cell_width|default:'120px' }};"{% endif %}>
         </div>
         <div class="logo-text">
-          <div class="lab-name">{{ lab.name|upper }}</div>
+          <div class="lab-name"{% if lab.settings.lab_name_font_size %} style="font-size:{{ lab.settings.lab_name_font_size }};"{% endif %}>{{ lab.name|upper }}</div>
           <div class="lab-tagline">
             {% if lab.settings.tagline %}{{ lab.settings.tagline }}{% else %}Accurate <span class="sep">|</span> Caring <span class="sep">|</span> Instant{% endif %}
           </div>
