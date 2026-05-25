@@ -15,6 +15,7 @@ TRIAL_SETTINGS = {
     "tech_name": "Damundar Mahto",
     "tech_qualification": "CMLT",
     "tech_designation": "Lab.Technologist",
+    "pathologist_signature_path": "static/branding/rkumar.png",
     "pathologist_name": "R.Kumar",
     "pathologist_qualification": "MBBS, MD(Pathology)",
     "pathologist_reg_no": "3100",
