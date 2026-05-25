@@ -728,6 +728,49 @@
 </div>
 {% endif %}
 
+{% with tpl_code=report.report_template.code %}
+{% if tpl_code == "WIDAL" or tpl_code == "MP-AG" or tpl_code == "MP-SMEAR" or tpl_code == "DEN-NS1" or tpl_code == "DEN-IGGM" %}
+  {% with hide_status=1 colspan=4 %}
+<table class="results">
+  <thead>
+    <tr>
+      <th class="col-test">Investigation</th>
+      <th class="col-result">Result</th>
+      <th class="col-range">Reference Value</th>
+      <th class="col-unit">Unit</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% if category.sample_type or category.tat %}
+    <tr class="info-row">
+      <td colspan="{{ colspan }}">
+        {% if category.sample_type %}<span class="info-label">Sample Type:</span> {{ category.sample_type }}{% endif %}
+        {% if category.sample_type and category.tat %} &nbsp;&nbsp;&nbsp; {% endif %}
+        {% if category.tat %}<span class="info-label">TAT:</span> {{ category.tat }}{% endif %}
+      </td>
+    </tr>
+    {% endif %}
+
+    {% regroup category.results by subsection as subsection_groups %}
+    {% for group in subsection_groups %}
+      {% if group.grouper %}
+      <tr class="subsection-row"><td colspan="{{ colspan }}">{{ group.grouper }}</td></tr>
+      {% endif %}
+      {% for r in group.list %}
+      <tr>
+        <td class="col-test">
+          <span class="test-name">{{ r.test.name }}</span>
+        </td>
+        <td class="col-result">{{ r.result_value }}</td>
+        <td class="col-range">{{ r.reference_range_used }}</td>
+        <td class="col-unit">{{ r.unit_used }}</td>
+      </tr>
+      {% endfor %}
+    {% endfor %}
+  </tbody>
+</table>
+  {% endwith %}
+{% else %}
 <table class="results">
   <thead>
     <tr>
@@ -782,6 +825,8 @@
     {% endfor %}
   </tbody>
 </table>
+{% endif %}
+{% endwith %}
 {% endfor %}
 
 {# ═══════════════════ INTERPRETATION ═══════════════════ #}
