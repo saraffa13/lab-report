@@ -40,6 +40,8 @@ class Command(BaseCommand):
                 pincode="834006",
                 email="ksgdrvivek@gmail.com",
                 phone="9234522491, 9934939768",
+                primary_color="#1e3a8a",
+                secondary_color="#0ea5e9",
                 settings=TRIAL_SETTINGS,
             ),
         )
@@ -48,22 +50,12 @@ class Command(BaseCommand):
         trial.settings = merged
         trial.phone = "9234522491, 9934939768"
         trial.state = "JH"
+        trial.primary_color = "#1e3a8a"
+        trial.secondary_color = "#0ea5e9"
         trial.save()
 
-        # Copy colors / logo / letterheads / signature from the first real lab.
-        orig = Lab.objects.exclude(slug="ksganga-trial").order_by("created_at").first()
-        if orig is not None:
-            trial.primary_color = orig.primary_color
-            trial.secondary_color = orig.secondary_color
-            if orig.logo and not trial.logo:
-                trial.logo = orig.logo
-            if orig.letterhead_header and not trial.letterhead_header:
-                trial.letterhead_header = orig.letterhead_header
-            if orig.letterhead_footer and not trial.letterhead_footer:
-                trial.letterhead_footer = orig.letterhead_footer
-            if orig.default_signature and not trial.default_signature:
-                trial.default_signature = orig.default_signature
-            trial.save()
+        # Colors set explicitly above; logo comes from brand_logo_path in
+        # TRIAL_SETTINGS, so no copy-from-other-lab fallback is needed.
 
         user, u_created = User.objects.get_or_create(
             email="trial@ksganga.local",
