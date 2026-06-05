@@ -105,6 +105,7 @@ class ReportViewSet(
             results=results,
             referred_by_text=data.get("referred_by_text", "Self") or "Self",
             clinical_history=data.get("clinical_history", "") or "",
+            billing_date=data.get("billing_date"),
             sample_collected_by_name=data.get("sample_collected_by_name", "") or "",
             sample_collected_at=data.get("sample_collected_at"),
             report_released_at=data.get("report_released_at"),

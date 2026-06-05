@@ -145,6 +145,7 @@ class ReportService:
         results: list[ResultInput],
         referred_by_text: str = "Self",
         clinical_history: str = "",
+        billing_date: datetime | None = None,
         sample_collected_by_name: str = "",
         sample_collected_at: datetime | None = None,
         report_released_at: datetime | None = None,
@@ -162,6 +163,7 @@ class ReportService:
         # Snapshot reference ranges per result
         accession = _next_accession_number(lab)
         now = timezone.now()
+        registered_at = billing_date or now
         collected_at = sample_collected_at or now
         released_at = report_released_at or now
 
@@ -175,7 +177,7 @@ class ReportService:
             report_template_id=template_id,
             package_id=package_id,
             status="final",
-            billing_date=now,
+            billing_date=registered_at,
             sample_collected_at=collected_at,
             sample_received_at=collected_at,
             testing_started_at=now,

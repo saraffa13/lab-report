@@ -22,6 +22,10 @@ export type ReportDetail = ReportListItem & {
   package: string | null;
   referred_by_text: string;
   clinical_history: string;
+  billing_date: string | null;
+  sample_collected_by_name: string;
+  sample_collected_at: string | null;
+  report_released_at: string | null;
   results: Array<{
     id: string;
     test: string;
@@ -51,6 +55,7 @@ export type CreateReportPayload = {
   results: Array<{ test_id: string; value: string }>;
   referred_by_text?: string;
   clinical_history?: string;
+  billing_date?: string | null;
   sample_collected_by_name?: string;
   sample_collected_at?: string | null;
   report_released_at?: string | null;

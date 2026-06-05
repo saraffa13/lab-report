@@ -179,6 +179,14 @@ export default function ReportDetailPage() {
                 mono
               />
               <DossierRow
+                label="Registered On"
+                value={
+                  report.billing_date
+                    ? new Date(report.billing_date).toLocaleString()
+                    : "—"
+                }
+              />
+              <DossierRow
                 label="Referring Dr."
                 value={report.referred_by_text || "Self"}
               />

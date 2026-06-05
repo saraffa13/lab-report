@@ -80,6 +80,7 @@ export default function CreateReportPage() {
   const [error, setError] = useState<string | null>(null);
   const [patientMode, setPatientMode] = useState<"new" | "existing">("new");
   const [collectedBy, setCollectedBy] = useState("");
+  const [registeredOn, setRegisteredOn] = useState<string>(() => localNowIso());
   const [collectedOn, setCollectedOn] = useState<string>(() => localNowIso());
   const [reportedOn, setReportedOn] = useState<string>(() => localNowIso());
 
@@ -192,6 +193,7 @@ export default function CreateReportPage() {
         results: tests.map((t) => ({ test_id: t.id, value: results[t.id] })),
         referred_by_text: referredBy,
         clinical_history: clinicalHistory,
+        billing_date: registeredOn ? new Date(registeredOn).toISOString() : null,
         sample_collected_by_name: collectedBy.trim(),
         sample_collected_at: collectedOn ? new Date(collectedOn).toISOString() : null,
         report_released_at: reportedOn ? new Date(reportedOn).toISOString() : null,
@@ -347,6 +349,17 @@ export default function CreateReportPage() {
           <section className="mb-14">
             <h3 className="text-2xl font-bold text-on-primary-fixed mb-5">Sample Tracking</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-5">
+              <div className="flex flex-col gap-2">
+                <label className="text-xs text-on-surface-variant font-medium uppercase tracking-wider">
+                  Registered On
+                </label>
+                <input
+                  type="datetime-local"
+                  value={registeredOn}
+                  onChange={(e) => setRegisteredOn(e.target.value)}
+                  className="bg-surface-container-highest border border-outline-variant/15 text-on-surface p-3 rounded-md focus:bg-surface-container-lowest focus:border-secondary focus:ring-1 focus:ring-secondary outline-none transition-all text-sm"
+                />
+              </div>
               <div className="flex flex-col gap-2">
                 <label className="text-xs text-on-surface-variant font-medium uppercase tracking-wider">
                   Sample Collected By

@@ -55,6 +55,7 @@ class CreateReportSerializer(serializers.Serializer):
     results = ResultInputSerializer(many=True)
     referred_by_text = serializers.CharField(default="Self", allow_blank=True, required=False)
     clinical_history = serializers.CharField(required=False, allow_blank=True, default="")
+    billing_date = serializers.DateTimeField(required=False, allow_null=True)
     sample_collected_by_name = serializers.CharField(required=False, allow_blank=True, default="", max_length=200)
     sample_collected_at = serializers.DateTimeField(required=False, allow_null=True)
     report_released_at = serializers.DateTimeField(required=False, allow_null=True)
@@ -107,6 +108,7 @@ class ReportDetailSerializer(serializers.ModelSerializer):
             "package", "package_name",
             "referred_by_text", "clinical_history",
             "sample_collected_by_name", "sample_collected_at", "report_released_at",
+            "billing_date",
             "status", "signed_at", "created_at",
             "total_amount", "payment_status", "paid_at",
             "results",
