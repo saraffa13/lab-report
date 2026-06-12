@@ -729,7 +729,7 @@
 {% endif %}
 
 {% with tpl_code=report.report_template.code %}
-{% if tpl_code == "WIDAL" or tpl_code == "MP-AG" or tpl_code == "MP-SMEAR" or tpl_code == "DEN-NS1" or tpl_code == "DEN-IGGM" %}
+{% if tpl_code == "WIDAL" or tpl_code == "MP-AG" or tpl_code == "MP-SMEAR" or tpl_code == "DEN-NS1" or tpl_code == "DEN-IGGM" or tpl_code == "HIV" or tpl_code == "HCV" or tpl_code == "HBSAG" %}
   {% with hide_status=1 colspan=4 %}
 <table class="results">
   <thead>
