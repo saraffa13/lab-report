@@ -33,22 +33,17 @@ from apps.patients.models import Patient
 from apps.reports.models import Report, ReportResult
 from apps.tenancy.models import Lab
 
-from .services import _barcode_data_uri, _group_results_by_category, _qr_data_uri
+from .services import _build_render_context
 
 
 def _build_context(report):
-    public_base = getattr(settings, "PUBLIC_BASE_URL", "") or "http://localhost:8000"
-    verify_url = f"{public_base.rstrip('/')}/verify/{report.accession_number}/"
-    return {
-        "report": report,
-        "patient": report.patient,
-        "lab": report.lab,
-        "signed_by": report.signed_by,
-        "categories": _group_results_by_category(report),
-        "barcode_img": _barcode_data_uri(report.accession_number),
-        "qr_img": _qr_data_uri(verify_url),
-        "verify_url": verify_url,
-    }
+    """Match the production PDF pipeline's context so previews show exactly
+    what WeasyPrint will render (subsections + template-ordered rows included)."""
+    return _build_render_context(
+        report,
+        template=report.report_template,
+        results_qs=report.results.all(),
+    )
 
 
 def _template_path(report) -> str:
@@ -110,10 +105,15 @@ def _build_all_tests_report() -> Report:
     if lab is None:
         raise Http404("No lab in DB — seed one first.")
 
-    patient = Patient.objects.filter(lab=lab).first()
+    # No authenticated user here, so the lab-scoped default manager returns
+    # .none(); query all_objects and always supply a patient_code.
+    patient = Patient.all_objects.filter(lab=lab).first()
     if patient is None:
+        from apps.reports.services import _default_patient_code
+
         patient = Patient.objects.create(
             lab=lab,
+            patient_code=_default_patient_code(lab),
             name="Sample Patient",
             sex="M",
             age=35,
@@ -184,7 +184,7 @@ def preview_all_tests_pdf(request):
     html = render_to_string(_template_path(report), _build_context(report))
     pdf_bytes = HTML(string=html, base_url=str(settings.BASE_DIR)).write_pdf()
     resp = HttpResponse(pdf_bytes, content_type="application/pdf")
-    resp["Content-Disposition"] = f'inline; filename="all-tests.pdf"'
+    resp["Content-Disposition"] = 'inline; filename="all-tests.pdf"'
     return resp
 
 
@@ -201,10 +201,19 @@ def _build_template_report(template: ReportTemplate) -> Report:
     if lab is None:
         raise Http404("No lab in DB — seed one first.")
 
-    patient = Patient.objects.filter(lab=lab).first()
+    # No authenticated user here, so the lab-scoped default manager returns
+    # .none(); query all_objects and always supply a patient_code.
+    patient = Patient.all_objects.filter(lab=lab).first()
     if patient is None:
+        from apps.reports.services import _default_patient_code
+
         patient = Patient.objects.create(
-            lab=lab, name="Sample Patient", sex="M", age=35, phone="0000000000",
+            lab=lab,
+            patient_code=_default_patient_code(lab),
+            name="Sample Patient",
+            sex="M",
+            age=35,
+            phone="0000000000",
         )
 
     accession = _slug_for_accession(template.code)

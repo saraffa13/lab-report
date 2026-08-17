@@ -42,25 +42,38 @@ def _qr_data_uri(value: str) -> str:
     return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("ascii")
 
 
-def _group_results_by_category(report) -> list[dict]:
-    grouped: dict[str, dict] = {}
-    for result in report.results.select_related("test__category").order_by("test__category__display_order", "test__display_order", "test__name"):
-        cat = result.test.category
-        key = str(cat.id)
-        if key not in grouped:
-            grouped[key] = {"name": cat.name, "results": []}
-        grouped[key]["results"].append(result)
-    return list(grouped.values())
-
-
 def _build_render_context(report, *, template, results_qs):
     """Common context for one section of a (possibly multi-template) report."""
     public_base = getattr(settings, "PUBLIC_BASE_URL", "") or "http://localhost:8000"
     verify_url = f"{public_base.rstrip('/')}/verify/{report.accession_number}/"
+    # Map test -> subsection heading and template ordering from the template
+    # being rendered, so the generic template's `regroup by subsection` prints
+    # contiguous section headers in template order (not alphabetical name order).
+    section_by_test: dict[str, str] = {}
+    order_by_test: dict[str, int] = {}
+    if template is not None:
+        for index, m in enumerate(template.template_tests.all()):
+            section_by_test[str(m.test_id)] = m.section
+            order_by_test[str(m.test_id)] = index
+
+    results = list(
+        results_qs.select_related("test__category").order_by(
+            "test__category__display_order", "test__display_order", "test__name"
+        )
+    )
+
+    def _sort_key(result) -> tuple[int, int, str]:
+        template_order = order_by_test.get(str(result.test_id))
+        if template_order is not None:
+            return (0, template_order, result.test.name)
+        # Fallback for results not in the template (ad-hoc entries).
+        return (1, result.test.display_order, result.test.name)
+
+    results.sort(key=_sort_key)
+
     grouped: dict[str, dict] = {}
-    for result in results_qs.select_related("test__category").order_by(
-        "test__category__display_order", "test__display_order", "test__name"
-    ):
+    for result in results:
+        result.subsection = section_by_test.get(str(result.test_id), "")
         cat = result.test.category
         key = str(cat.id)
         if key not in grouped:

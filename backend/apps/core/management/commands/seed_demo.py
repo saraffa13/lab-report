@@ -3,10 +3,10 @@ Seed a working demo environment:
   - 1 Lab ("Demo Diagnostics")
   - 1 admin user (demo@labreport.local / demo1234)
   - Roles and core permissions
-  - Full test catalog (~60 tests) covering every Pathkind-style report type
-  - 14 report templates (CBC, LFT, KFT, Liver+Kidney, LDH, GGT, Urine R/M,
+  - Full test catalog (~90 tests) covering every Pathkind-style report type
+  - 16 report templates (CBC, LFT, KFT, Liver+Kidney, LDH, GGT, Urine R/M,
     Thyroid, Malaria Antigen, MP Smear, Widal, Dengue NS1, Dengue IgG/IgM,
-    Typhidot Enterocheck)
+    Typhidot Enterocheck, Stool Routine)
 
 Idempotent: safe to re-run. Uses update_or_create and hard_deletes children
 before re-inserting.
@@ -262,6 +262,44 @@ TESTS = [
         [("A", None, None, None, None, "Not Detected")], ""),
     ("CLIN_PATH", "URINE-BACT", "Bacteria", "", "Microscopy", "Random Urine",
         [("A", None, None, None, None, "Not Detected")], ""),
+
+    # ── CLINICAL PATHOLOGY · Stool Routine & Microscopic Examination ──
+    ("CLIN_PATH", "STOOL-CONSISTENCY", "Consistency", "", "Macroscopic Examination", "Stool",
+        [("A", None, None, None, None, "Formed / Semi-formed")], ""),
+    ("CLIN_PATH", "STOOL-COLOR", "Color", "", "Macroscopic Examination", "Stool",
+        [("A", None, None, None, None, "Brownish")], ""),
+    ("CLIN_PATH", "STOOL-MUCUS", "Mucus", "", "Macroscopic Examination", "Stool",
+        [("A", None, None, None, None, "Absent")], ""),
+    ("CLIN_PATH", "STOOL-BLOOD-MACRO", "Blood (Macroscopic)", "", "Macroscopic Examination", "Stool",
+        [("A", None, None, None, None, "Absent")], ""),
+    ("CLIN_PATH", "STOOL-ODOR", "Odor", "", "Macroscopic Examination", "Stool",
+        [("A", None, None, None, None, "Normal Fecal")], ""),
+    ("CLIN_PATH", "STOOL-PARASITES-WORMS", "Parasites / Worms", "", "Macroscopic Examination", "Stool",
+        [("A", None, None, None, None, "Absent")], ""),
+
+    ("CLIN_PATH", "STOOL-PH", "Reaction (pH)", "", "Chemical Examination", "Stool",
+        [("A", None, None, None, None, "7.0 - 7.5 (Neutral/Slightly Alkaline)")], ""),
+    ("CLIN_PATH", "STOOL-OCCULT-BLOOD", "Occult Blood", "", "Chemical Examination", "Stool",
+        [("A", None, None, None, None, "Negative")], ""),
+    ("CLIN_PATH", "STOOL-REDUCING-SUGARS", "Reducing Sugars", "", "Chemical Examination", "Stool",
+        [("A", None, None, None, None, "Nil")], ""),
+    ("CLIN_PATH", "STOOL-BILE-PIGMENTS-SALTS", "Bile Pigments / Salts", "", "Chemical Examination", "Stool",
+        [("A", None, None, None, None, "Present")], ""),
+
+    ("CLIN_PATH", "STOOL-PUS-CELLS", "Pus Cells (Leukocytes)", "/HPF", "Microscopic Examination", "Stool",
+        [("A", None, None, None, None, "0 - 2 / HPF")], ""),
+    ("CLIN_PATH", "STOOL-RBC", "Red Blood Cells (RBCs)", "/HPF", "Microscopic Examination", "Stool",
+        [("A", None, None, None, None, "Nil / HPF")], ""),
+    ("CLIN_PATH", "STOOL-EPITHELIAL-CELLS", "Epithelial Cells", "/HPF", "Microscopic Examination", "Stool",
+        [("A", None, None, None, None, "Few / HPF")], ""),
+    ("CLIN_PATH", "STOOL-PROTOZOA", "Protozoa / Parasites", "", "Microscopic Examination", "Stool",
+        [("A", None, None, None, None, "Absent")], ""),
+    ("CLIN_PATH", "STOOL-CYSTS-OVA", "Cysts / Ova", "", "Microscopic Examination", "Stool",
+        [("A", None, None, None, None, "Absent")], ""),
+    ("CLIN_PATH", "STOOL-FAT-GLOBULES", "Fat Globules / Droplets", "", "Microscopic Examination", "Stool",
+        [("A", None, None, None, None, "Absent / Rare")], ""),
+    ("CLIN_PATH", "STOOL-VEG-STARCH", "Vegetable / Starch Fibers", "", "Microscopic Examination", "Stool",
+        [("A", None, None, None, None, "Present (Few)")], ""),
 ]
 
 TEMPLATES = [
@@ -306,6 +344,33 @@ TEMPLATES = [
      "tests": ["DEN-IGG", "DEN-IGM"]},
     {"code": "TYPHIDOT", "name": "Typhidot IgG & IgM Rapid (Enterocheck)",
      "tests": ["TYP-IGG", "TYP-IGM"]},
+    {"code": "STOOL", "name": "Stool Routine & Microscopic Examination (R/E)",
+     "tests": [
+         "STOOL-CONSISTENCY", "STOOL-COLOR", "STOOL-MUCUS", "STOOL-BLOOD-MACRO",
+         "STOOL-ODOR", "STOOL-PARASITES-WORMS",
+         "STOOL-PH", "STOOL-OCCULT-BLOOD", "STOOL-REDUCING-SUGARS", "STOOL-BILE-PIGMENTS-SALTS",
+         "STOOL-PUS-CELLS", "STOOL-RBC", "STOOL-EPITHELIAL-CELLS", "STOOL-PROTOZOA",
+         "STOOL-CYSTS-OVA", "STOOL-FAT-GLOBULES", "STOOL-VEG-STARCH",
+     ],
+     "sections": {
+         "STOOL-CONSISTENCY": "PHYSICAL / MACROSCOPIC",
+         "STOOL-COLOR": "PHYSICAL / MACROSCOPIC",
+         "STOOL-MUCUS": "PHYSICAL / MACROSCOPIC",
+         "STOOL-BLOOD-MACRO": "PHYSICAL / MACROSCOPIC",
+         "STOOL-ODOR": "PHYSICAL / MACROSCOPIC",
+         "STOOL-PARASITES-WORMS": "PHYSICAL / MACROSCOPIC",
+         "STOOL-PH": "CHEMICAL",
+         "STOOL-OCCULT-BLOOD": "CHEMICAL",
+         "STOOL-REDUCING-SUGARS": "CHEMICAL",
+         "STOOL-BILE-PIGMENTS-SALTS": "CHEMICAL",
+         "STOOL-PUS-CELLS": "MICROSCOPIC",
+         "STOOL-RBC": "MICROSCOPIC",
+         "STOOL-EPITHELIAL-CELLS": "MICROSCOPIC",
+         "STOOL-PROTOZOA": "MICROSCOPIC",
+         "STOOL-CYSTS-OVA": "MICROSCOPIC",
+         "STOOL-FAT-GLOBULES": "MICROSCOPIC",
+         "STOOL-VEG-STARCH": "MICROSCOPIC",
+     }},
 ]
 
 
@@ -434,11 +499,13 @@ class Command(BaseCommand):
                 },
             )
             ReportTemplateTest.all_objects.filter(template=tmpl).hard_delete()
+            sections = t.get("sections", {})
             for order, test_code in enumerate(t["tests"]):
                 if test_code not in tests_by_code:
                     raise ValueError(f"Template {t['code']} references unknown test {test_code}")
                 ReportTemplateTest.objects.create(
                     template=tmpl, test=tests_by_code[test_code], display_order=order,
+                    section=sections.get(test_code, ""),
                 )
         self.stdout.write(f"  Templates: {len(TEMPLATES)}")
 
