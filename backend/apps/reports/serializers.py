@@ -48,6 +48,7 @@ class ResultInputSerializer(serializers.Serializer):
     value = serializers.CharField(max_length=200, allow_blank=False)
 
 
+
 class CreateReportSerializer(serializers.Serializer):
     patient = PatientInlineSerializer()
     template_id = serializers.UUIDField(required=False, allow_null=True)
